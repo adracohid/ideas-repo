@@ -3,7 +3,7 @@
 
     <groupId>es.us.isa</groupId>
     <artifactId>ideas-repo</artifactId>
-    <version>0.7</version>
+    <version>0.8-SNAPSHOT</version>
     <packaging>jar</packaging>
     
     <name>ideas-repo</name>
