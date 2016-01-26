@@ -87,17 +87,19 @@ public class FSFacade {
 			throws BadUriException {
 		FSDirectory fsDir = null;
 		String uriArray[] = splitURI(uri);
-		if (uriArray.length < 3) {
+		if (uriArray.length < 2) {
 			throw new BadUriException();
 		}
-		String ws = uriArray[0];
+        String ws = uriArray[0];
 		String pr = uriArray[1];
 		String dirName = "";
-		for (int i = 2; i < uriArray.length; i++) {
-			dirName += uriArray[i];
-			if (i < uriArray.length) {
-				dirName += SEPARATOR;
-			}
+        if (uriArray.length > 2) {
+            for (int i = 2; i < uriArray.length; i++) {
+                dirName += uriArray[i];
+                if (i < uriArray.length) {
+                    dirName += SEPARATOR;
+                }
+            }
 		}
 		fsDir = new FSDirectory(dirName, ws, pr, owner);
 		return fsDir;
