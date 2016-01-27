@@ -168,9 +168,6 @@
         </profile>
         <profile>
             <id>ideas-repo-release</id>
-            <activation>
-                <activeByDefault>true</activeByDefault>
-            </activation>
             <build>
                 <plugins>
                     <plugin>

@@ -35,8 +35,6 @@ public class FSRepo extends Repo {
 	/**
 	 * Instantiates a new fS repo.
 	 * 
-	 * @param baseUserUri
-	 *            the base user uri
 	 */
 	public FSRepo() {
 		super();
