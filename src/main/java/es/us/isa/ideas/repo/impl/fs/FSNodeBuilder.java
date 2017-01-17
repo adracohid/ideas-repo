@@ -96,12 +96,12 @@ public class FSNodeBuilder {
 			String aux = absPath.substring(absPath.indexOf(baseUri)
 					+ baseUri.length());
 
-			res = aux.replace(aux.split("/")[0], "");
+			res = aux.substring(aux.indexOf("/"));
 			res = res.replaceFirst("/[^/]+?/", "");
 
 		} else {
 			String aux = absPath.substring(absPath.indexOf(path));
-			res = aux.replace(aux.split("/")[0], "");
+			res = aux.substring(aux.indexOf("/"));
 			res = res.replaceFirst("/[^/]+?/", "");
 		}
 
