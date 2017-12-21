@@ -19,6 +19,7 @@ import org.apache.commons.io.FileUtils;
 import org.apache.commons.io.IOUtils;
 
 import es.us.isa.ideas.repo.IdeasRepo;
+import es.us.isa.ideas.repo.Workspace;
 import es.us.isa.ideas.repo.exception.AuthenticationException;
 import es.us.isa.ideas.repo.exception.BadUriException;
 import es.us.isa.ideas.repo.exception.ObjectClassNotValidException;
@@ -315,11 +316,11 @@ public class FSFacade {
 		ws.saveAsZip(os);
 	}
 
-	public static void extractIn(String folderUri, String username, File f)
+	public static void extractIn(String worskpaceName, String username, File f)
 			throws BadUriException, ObjectClassNotValidException, IOException {
-		FSProject fsProject = getProjectFromUri(folderUri, username);
+        FSWorkspace fsworkspace = new FSWorkspace(worskpaceName, username);
 
-		File folder = new File(IdeasRepo.get().getObjectFullUri(fsProject));
+		File folder = new File(IdeasRepo.get().getObjectFullUri(fsworkspace));
 		if (!folder.exists()) {
 			folder.mkdir();
 		}
