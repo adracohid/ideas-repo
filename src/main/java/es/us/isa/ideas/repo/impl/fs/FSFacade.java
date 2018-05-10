@@ -342,6 +342,7 @@ public class FSFacade {
 			File p = new File(fullPathToProject);
 
 			File destination = new File(dest);
+                        destination.mkdirs();
 			FileUtils.copyDirectory(p, destination);
 
 		} catch (Exception e) {
@@ -358,16 +359,15 @@ public class FSFacade {
 		try {
 			String fullPathToProject = IdeasRepo.get().getObjectFullUri(pr);
 			File p = new File(fullPathToProject);
-			File src = new File(source);
-
+			String directory=source.substring(source.lastIndexOf("/")+1);
+                        File src = new File(source);
 			Path output = p.toPath();
 			Path tempOutput = src.toPath();
-			output = output.resolve("R-OutputFolder");
-			tempOutput = tempOutput.resolve("R-OutputFolder");
+			output = output.resolve(directory);
+			tempOutput = tempOutput;
 			File o = output.toFile();
 			File to = tempOutput.toFile();
 			if (to.exists()) {
-
 				FileUtils.copyDirectory(to, o);
 			} else {
 

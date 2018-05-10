@@ -30,6 +30,8 @@ public class FSNodeIcon {
         
         public static String BINARY_FILE = "binary_file_icon";
         
+        public static String LATEX_FILE = "latex_icon";
+        
         
         private static ImmutableMap<String,String> iconsMap=ImmutableMap.<String, String>builder()
             .put("doc", DOCUMENT_FILE) 
@@ -46,6 +48,7 @@ public class FSNodeIcon {
             .put("gif",IMAGE_FILE)
             .put("png",IMAGE_FILE)
             .put("r",R_FILE)
+            .put("tex",LATEX_FILE)
             .put("txt", FILE)            
             .build();
         
