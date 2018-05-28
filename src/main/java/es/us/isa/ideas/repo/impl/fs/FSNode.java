@@ -45,6 +45,7 @@ public class FSNode extends Node {
 		s+= "\"icon\":" + getIcon() + ",";
 		s+= "\"isFolder\":" + isFolder() + ",";
 		s+= "\"keyPath\":\"" + getKeyPath() + "\",";
+                s+= "\"description\":\""+getDescription() +"\",";
 		s+= "\"children\": [";
 		
 			for ( int i = 0; i < getChildren().size() ; i++ ) {
@@ -58,6 +59,6 @@ public class FSNode extends Node {
 		s+= "]";
 		s += "}";
 		return s;
-	}
+	}                
 	
 }

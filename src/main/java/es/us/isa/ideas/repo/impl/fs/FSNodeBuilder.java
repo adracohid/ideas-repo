@@ -11,6 +11,7 @@ import java.util.Map;
 import org.apache.commons.io.FileUtils;
 
 import es.us.isa.ideas.repo.IdeasRepo;
+import es.us.isa.ideas.repo.Node;
 
 public class FSNodeBuilder {
 
@@ -33,7 +34,7 @@ public class FSNodeBuilder {
 		}
 		try {
 			File[] subFileArr = parentDir.listFiles();
-
+                        Map<String,String> descriptions=new HashMap<>();
 			for (int i = 0; i < subFileArr.length; i++) {
 				File s = subFileArr[i];
 				if (s.isDirectory()) {
@@ -48,7 +49,7 @@ public class FSNodeBuilder {
 						subDirNode.setIcon(FSNodeIcon.FOLDER);
 					}
 					subDirs.put(s, subDirNode);
-				} else if (!s.getName().startsWith(".")) {
+				} else if (!s.getName().startsWith(".") && !s.getName().endsWith(".description")) {
 					subFiles.add(subFileArr[i]);
 					FSNode subNode = new FSNode();
 					if (s.getName().endsWith(SEDL_EXTENSION)) {
@@ -62,14 +63,30 @@ public class FSNodeBuilder {
 					subNode.setKeyPath(constructFileKeyPath(s, path));
 					parentNode.getChildren().add(subNode);
 				} else {
+                                        FSNode targetNode=null;
 					if (s.getName().equals(".description")
 							|| s.getName().equals(".description.txt")) {
-						parentNode.setDescription(FileUtils.readFileToString(s)
+						targetNode=parentNode;
+                                                targetNode.setDescription(FileUtils.readFileToString(s));
+					}else if(s.getName().endsWith(".description")){
+                                            String filename=s.getName().replace(".description","");
+                                            descriptions.put(filename, FileUtils.readFileToString(s)
 								.replace("\n", "\\n"));
-					}
+                                            
+                                        }
+                                        
 				}
 
 			}
+                        for(String file:descriptions.keySet()){
+                            FSNode targetNode=null;
+                            for(Node candidate:parentNode.getChildren()){
+                              if(!candidate.getTitle().endsWith(".ang") && !candidate.getTitle().endsWith(".ctl") && candidate.getTitle().contains(file) && candidate.getTitle().contains("."))
+                                    targetNode=(FSNode)candidate;
+                            }
+                            if(targetNode!=null)
+                                    targetNode.setDescription(descriptions.get(file));
+                        }
 			if (!subDirs.isEmpty()) {
 
 				for (File subDir : subDirs.keySet()) {
