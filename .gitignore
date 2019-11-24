@@ -1,0 +1,7 @@
+/target/
+.settings
+.project
+.classpath
+/src/main/resources
+pom.xml
+/yo
