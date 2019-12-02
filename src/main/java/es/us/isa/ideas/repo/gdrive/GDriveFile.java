@@ -27,14 +27,45 @@ public class GDriveFile extends File {
 
 	@Override
 	public boolean write(byte[] content) throws AuthenticationException {
-		// TODO Auto-generated method stub
-		return false;
+		boolean res=false;
+		try {
+			com.google.api.services.drive.model.File file=
+			DriveQuickstart.getFileByName(this.getName(), this.getProject(), this.getWorkspace(), this.getOwner());
+			if(file==null) {
+				LOGGER.log(Level.INFO, "File " + this.getName() + " does not exist.");
+
+			}else {
+				DriveQuickstart.writeFileAsByte(file.getId(), content);
+				res=true;
+			}
+		} catch (IOException | GeneralSecurityException e) {
+			
+			e.printStackTrace();
+		}
+		return res;
 	}
 
 	@Override
 	protected boolean writeImpl(String content) {
-		// TODO Auto-generated method stub
-		return false;
+		boolean res=false;
+		try {
+			com.google.api.services.drive.model.File file=
+					DriveQuickstart.getFileByName(this.getName(), this.getProject(), this.getWorkspace(), this.getOwner());
+			if(file==null) {
+				
+				LOGGER.log(Level.INFO, "File " + this.getName() + " does not exist.");
+
+			}else {
+				DriveQuickstart.writeFile(file.getId(), content);
+				res=true;
+			}
+			
+		} catch (IOException | GeneralSecurityException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return res;
 	}
 
 	@Override
@@ -177,11 +208,18 @@ public class GDriveFile extends File {
 	protected String readAsStringImpl() {
 		String res = "";
 		try {
-			String id = DriveQuickstart
-					.getFileByName(this.getName(), this.getProject(), this.getWorkspace(), this.getOwner()).getId();
-			OutputStream outputStream = new ByteArrayOutputStream();
-			DriveQuickstart.driveService().files().get(id).executeMediaAndDownloadTo(outputStream);
-			res = res + outputStream;
+			
+			com.google.api.services.drive.model.File file= DriveQuickstart
+					.getFileByName(this.getName(), this.getProject(), this.getWorkspace(), this.getOwner());
+			if(file==null) {
+				LOGGER.log(Level.INFO, "File " + this.getName() + " does not exist.");
+				res=null;
+			}else {
+				
+			
+			
+			res = res + DriveQuickstart.download(file.getId());
+			}
 		} catch (IOException | GeneralSecurityException e) {
 			e.printStackTrace();
 		}
@@ -191,8 +229,8 @@ public class GDriveFile extends File {
 
 	@Override
 	protected byte[] readAsBytesImpl() {
-		// TODO Auto-generated method stub
-		return null;
+		
+		return readAsStringImpl().getBytes();
 	}
 
 	public boolean exist() {

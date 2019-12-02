@@ -50,6 +50,15 @@ public class GDriveTest {
 		GDriveWorkspace gdworkspace = new GDriveWorkspace("workspace1", userAuthenticated());
 		String id = DriveQuickstart.getRepoFolder(gdworkspace.getOwner()).getId();
 		DriveQuickstart.driveService().files().delete(id).execute();
+		FSWorkspace w = new FSWorkspace("workspace4", userAuthenticated());
+		w.delete();
+		FSWorkspace w5 = new FSWorkspace("workspace5", userAuthenticated());
+		w5.delete();
+		FSWorkspace w6 = new FSWorkspace("workspace6", userAuthenticated());
+		w6.delete();
+
+
+		
 	}
 
 	@Before
@@ -326,7 +335,6 @@ public class GDriveTest {
 	// Escribir y leer un fichero
 	@Test
 	public void testWriteReadFile() throws AuthenticationException {
-
 		System.out.println("Test write & read file ===================================================");
 		// 1º Se crea el workspace
 		FSWorkspace w = new FSWorkspace("workspace4", userAuthenticated());
@@ -341,18 +349,80 @@ public class GDriveTest {
 
 		// 3º Se crea el fichero
 
-		FSFile fsfile = new FSFile("datos2.txt", workspace.getName(), project.getName(), userAuthenticated());
+		FSFile fsfile = new FSFile("datos4.txt", workspace.getName(), project.getName(), userAuthenticated());
 		fsfile.persist();
-		// Escribir en el fichero
 
-		fsfile.write("DATOS");
 		// 4º Se sube el fichero
 		// PARA SUBIR UN FICHERO HACE FALTA QUE EXISTA EN EL REPOSITORIO
 		GDriveFile file = new GDriveFile(fsfile.getName(), workspace.getName(), project.getName(), userAuthenticated());
 		file.persist();
-
+		// Escribir en el archivo
+		boolean write=file.write("DATOS");
+		assertTrue(write);
+		GDriveFile newFile = new GDriveFile(fsfile.getName(), workspace.getName(), project.getName(), userAuthenticated());
+		
 		// leer el archivo
-		assertEquals("DATOS", file.readAsString());
+		assertEquals("DATOS", newFile.readAsString());
+	}
+	//Escribir y leer un fichero como un byte
+	@Test
+	public void testWriteReadFileAsByte() throws AuthenticationException {
+		System.out.println("Test write & read file as byte ===================================================");
+		// 1º Se crea el workspace
+		FSWorkspace w = new FSWorkspace("workspace4", userAuthenticated());
+		w.persist();
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+		workspace.persist();
+		// 2º Crear el proyecto
+		FSProject p = new FSProject("project1", workspace.getName(), userAuthenticated());
+		p.persist();
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+		project.persist();
+
+		// 3º Se crea el fichero
+
+		FSFile fsfile = new FSFile("datos5.txt", workspace.getName(), project.getName(), userAuthenticated());
+		fsfile.persist();
+
+		// 4º Se sube el fichero
+		// PARA SUBIR UN FICHERO HACE FALTA QUE EXISTA EN EL REPOSITORIO
+		GDriveFile file = new GDriveFile(fsfile.getName(), workspace.getName(), project.getName(), userAuthenticated());
+		file.persist();
+		// Escribir en el archivo
+		boolean write=file.write("DATOS".getBytes());
+		assertTrue(write);
+		GDriveFile newFile = new GDriveFile(fsfile.getName(), workspace.getName(), project.getName(), userAuthenticated());
+		
+		// leer el archivo
+		assertArrayEquals("DATOS".getBytes(), newFile.readAsBytes());
+	}
+	//Escribir y leer en un fichero que no exista
+	@Test
+	public void testWriteReadFileFail() throws AuthenticationException {
+		System.out.println("Test write & read file fail ==========================================");
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+		workspace.persist();
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+		project.persist();
+		GDriveFile file = new GDriveFile("datos6.txt", workspace.getName(), project.getName(), userAuthenticated());
+		assertTrue(!file.exist());
+		boolean write=file.write("DATOS");
+		assertTrue(!write);
+		assertNull(file.readAsString());
+		
+	}
+	//Escribir como bytes en un fichero que no exista
+	@Test
+	public void testWriteFileAsByteFail() throws AuthenticationException {
+		System.out.println("Test write file as byte fail =========================================");
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+		workspace.persist();
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+		project.persist();
+		GDriveFile file = new GDriveFile("datos6.txt", workspace.getName(), project.getName(), userAuthenticated());
+		assertTrue(!file.exist());
+		boolean write=file.write("DATOS".getBytes());
+		assertTrue(!write);
 	}
 
 	// GDriveDirectory
