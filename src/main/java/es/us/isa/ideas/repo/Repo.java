@@ -3,7 +3,6 @@ package es.us.isa.ideas.repo;
 import java.io.Serializable;
 
 import es.us.isa.ideas.repo.exception.AuthenticationException;
-import es.us.isa.ideas.repo.impl.fs.FSNode;
 import es.us.isa.ideas.repo.operation.Creatable;
 import es.us.isa.ideas.repo.operation.Deletable;
 import es.us.isa.ideas.repo.operation.Listable;
@@ -43,7 +42,7 @@ public abstract class Repo implements Serializable, RepoOperations {
 	}
 
 	@Override
-	public FSNode list(Listable l) throws AuthenticationException {
+	public Node list(Listable l) throws AuthenticationException {
 		return l.list();
 	}
 
@@ -66,6 +65,9 @@ public abstract class Repo implements Serializable, RepoOperations {
 	public boolean write(Writeable w, byte[] content) throws AuthenticationException {
 		return w.write( content );
 	}
+        
     
+    public abstract RepoElement generate(Class<? extends RepoElement> elementClass,String [] params);    
+     
 	
 }

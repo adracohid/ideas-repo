@@ -1,5 +1,6 @@
 package es.us.isa.ideas.repo;
 
+
 import es.us.isa.ideas.repo.AuthenticationManagerDelegate.AuthOpType;
 import es.us.isa.ideas.repo.exception.AuthenticationException;
 import es.us.isa.ideas.repo.impl.fs.FSNode;
@@ -83,6 +84,7 @@ public abstract class Workspace extends RepoElement implements Creatable,
 	 * @return true, if successful
 	 */
 	protected abstract boolean persistImpl();
+	
 
 	@Override
 	public FSNode list() throws AuthenticationException {

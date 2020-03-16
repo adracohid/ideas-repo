@@ -1,5 +1,6 @@
 package es.us.isa.ideas.repo.operation;
 
+
 import es.us.isa.ideas.repo.exception.AuthenticationException;
 
 /**
@@ -13,5 +14,6 @@ public interface Creatable extends Operation {
 	 * @return true, if successful
 	 */
 	public boolean persist() throws AuthenticationException;
+
 
 }

@@ -14,7 +14,9 @@ import java.util.Collections;
 import java.util.List;
 import java.util.logging.Logger;
 
+import com.google.api.client.auth.oauth2.AuthorizationCodeRequestUrl;
 import com.google.api.client.auth.oauth2.Credential;
+import com.google.api.client.auth.oauth2.TokenResponse;
 import com.google.api.client.extensions.java6.auth.oauth2.AuthorizationCodeInstalledApp;
 import com.google.api.client.extensions.jetty.auth.oauth2.LocalServerReceiver;
 import com.google.api.client.googleapis.auth.oauth2.GoogleAuthorizationCodeFlow;
@@ -37,6 +39,7 @@ import com.google.common.primitives.Bytes;
 
 import es.us.isa.ideas.repo.DummyAuthenticationManagerDelegate;
 import es.us.isa.ideas.repo.IdeasRepo;
+import es.us.isa.ideas.repo.exception.BadUriException;
 
 public class DriveQuickstart {
 	public static String userAuthenticated() {
@@ -59,7 +62,7 @@ public class DriveQuickstart {
 	 * scopes, delete your previously saved tokens/ folder.
 	 */
 	private static final List<String> SCOPES = Collections.singletonList(DriveScopes.DRIVE_FILE);
-	private static final String CREDENTIALS_FILE_PATH = "/credentials.json";
+	private static final String CREDENTIALS_FILE_PATH ="/credentials.json";
 
 	/**
 	 * Creates an authorized Credential object.
@@ -68,7 +71,44 @@ public class DriveQuickstart {
 	 * @return An authorized Credential object.
 	 * @throws IOException If the credentials.json file cannot be found.
 	 */
-	private static Credential getCredentials(final NetHttpTransport HTTP_TRANSPORT) throws IOException {
+	
+	public static Credential authorize(final NetHttpTransport HTTP_TRANSPORT) throws IOException{
+		InputStream in = DriveQuickstart.class.getResourceAsStream(CREDENTIALS_FILE_PATH);
+		if (in == null) {
+			throw new FileNotFoundException("Resource not found: " + CREDENTIALS_FILE_PATH);
+		}
+		GoogleClientSecrets clientSecrets = GoogleClientSecrets.load(JSON_FACTORY, new InputStreamReader(in));
+
+		// Build flow and trigger user authorization request.
+		GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(HTTP_TRANSPORT, JSON_FACTORY,
+				clientSecrets, SCOPES)
+						.setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TOKENS_DIRECTORY_PATH)))
+						//.setAccessType("online").build();
+						.build();
+		LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
+		 try {
+		      Credential credential = flow.loadCredential("usuariodeprueba608");
+		      if (credential != null
+		          && (credential.getRefreshToken() != null || 
+		              credential.getExpiresInSeconds() == null || 
+		              credential.getExpiresInSeconds() > 60)) {
+		        return credential;
+		      }
+		      // open in browser
+		      String redirectUri = receiver.getRedirectUri();
+		      AuthorizationCodeRequestUrl authorizationUrl =
+		          flow.newAuthorizationUrl().setRedirectUri(redirectUri);
+		      System.out.println(authorizationUrl);
+		      // receive authorization code and exchange it for an access token
+		      String code = receiver.waitForCode();
+		      TokenResponse response = flow.newTokenRequest(code).setRedirectUri(redirectUri).execute();
+		      // store credential and return it
+		      return flow.createAndStoreCredential(response, "usuariodeprueba608");
+		    } finally {
+		      receiver.stop();
+		    }
+	}
+	public static Credential getCredentials(final NetHttpTransport HTTP_TRANSPORT) throws IOException {
 		// Load client secrets.
 		InputStream in = DriveQuickstart.class.getResourceAsStream(CREDENTIALS_FILE_PATH);
 		if (in == null) {
@@ -80,17 +120,29 @@ public class DriveQuickstart {
 		GoogleAuthorizationCodeFlow flow = new GoogleAuthorizationCodeFlow.Builder(HTTP_TRANSPORT, JSON_FACTORY,
 				clientSecrets, SCOPES)
 						.setDataStoreFactory(new FileDataStoreFactory(new java.io.File(TOKENS_DIRECTORY_PATH)))
-						.setAccessType("offline").build();
+						//.setAccessType("online").build();
+						.build();
 		LocalServerReceiver receiver = new LocalServerReceiver.Builder().setPort(8888).build();
 		return new AuthorizationCodeInstalledApp(flow, receiver).authorize("user");
 	}
+	
+	public static boolean logout() {
+		boolean res=false;
+		java.io.File token=new java.io.File("src/main/resources/"+userAuthenticated()+"/StoredCredential");
+		if(token.exists()) {
+			token.delete();
+			res=true;
+		}
+		return res;
+	}
 
 	public static void main(String[] args) throws GeneralSecurityException, IOException {
+		//getCredentials(GoogleNetHttpTransport.newTrustedTransport());
 		list();
 		// folderList();
 		// getFilesByFolderId("17QI8SXAjZntG0J_ne9wnC3yi8cuIfqZm");
 		// getFoldersByFolderId("");
-		// upload();
+		//upload();
 		// download("1u49m9v44r-MsNucNwDUV8aEiMRMKArX-");
 		// createFolder();
 		// insertFileInFolder();
@@ -113,15 +165,24 @@ public class DriveQuickstart {
 		// moveFileToFolder("1MHHTqoCY8ml74rzPnxQzAaXZ2jlAnz6Q","1xU0EXZ2q3t8F9Rp-oy0W4W_5-c6WOH14");
 		// copyFileToFolder("1u5lAsYWK8tJXYKFSwNRUjvZ0UWHOjzc3","1JlPapv9sghJuy1KrGGKIEIcNIK7nBb5J");
 
-		writeFile(uploadFile("text.txt").getId(), "Sample text");
+		//writeFile(uploadFile("text.txt").getId(), "Sample text");
 
 	}
-
-	public static void writeFile(String id, String msg) throws IOException, GeneralSecurityException {
+	public static boolean renameFile(String id,String newName,Drive credentials) throws IOException, GeneralSecurityException{
+		boolean res=false;
+		File f = credentials.files().get(id).setFields("name").execute();
+		if(f!=null) {
+			f.setName(newName);
+			credentials.files().update(id, f).execute();
+			res=true;
+		}
+		return res;
+	}
+	public static void writeFile(String id, String msg,Drive credentials) throws IOException, GeneralSecurityException {
 		// Hay que comprobar que el fichero existe
-		File f = driveService().files().get(id).setFields("name, parents").execute();
+		File f = credentials.files().get(id).setFields("name, parents").execute();
 		String res = "";
-		res=download(id)+msg;
+		res=download(id,credentials)+msg;
 
 		// 3º Creamos el buffer de escritura
 		ByteArrayInputStream bais = new ByteArrayInputStream(res.getBytes());
@@ -129,24 +190,24 @@ public class DriveQuickstart {
 		// 4º Creamos un fichero nuevo donde se va a añadir los datos
 	
 		System.out.println("Name: " + f.getName());
-		File copy=driveService().files().create(new File().setName(f.getName()), content).setFields("id").execute();
+		File copy=credentials.files().create(new File().setName(f.getName()), content).setFields("id").execute();
 		//Movemos el nuevo fichero a la carpeta del archivo de origen
 		System.out.println("Carpeta: " + f.getParents().get(0));
 
-		moveFileToFolder(copy.getId(), f.getParents().get(0));
+		moveFileToFolder(copy.getId(), f.getParents().get(0), credentials);
 
 
 		// Finalmente eliminamos el fichero de origen
-		delete(id);
+		delete(id,credentials);
 	}
 
-	public static void writeFileAsByte(String id, byte[] msg) throws IOException, GeneralSecurityException {
+	public static void writeFileAsByte(String id, byte[] msg, Drive credentials) throws IOException, GeneralSecurityException {
 
 		// Hay que comprobar que el fichero existe
-		File f = driveService().files().get(id).setFields("name, parents").execute();
+		File f = credentials.files().get(id).setFields("name, parents").execute();
 		// 1º Copiamos el contenido del fichero
 		String s = "";
-		s = s + download(id);
+		s = s + download(id, credentials);
 		// 2º Añadimos al contenido los datos a escribir
 		byte[] b = Bytes.concat(s.getBytes(), msg);
 
@@ -155,29 +216,29 @@ public class DriveQuickstart {
 		InputStreamContent content = new InputStreamContent("text/plain", bais);
 		// 4º Creamos un fichero nuevo donde se va a añadir los datos
 		System.out.println("Nombre: "+f.getName());
-		File copy=driveService().files().create(new File().setName(f.getName()), content).setFields("id").execute();
+		File copy=credentials.files().create(new File().setName(f.getName()), content).setFields("id").execute();
 		//Movemos el nuevo fichero a la carpeta del archivo de origen
-		moveFileToFolder(copy.getId(), f.getParents().get(0));
+		moveFileToFolder(copy.getId(), f.getParents().get(0),credentials);
 		// Finalmente eliminamos el fichero de origen
-		delete(id);
+		delete(id,credentials);
 
 	}
 
 	// NO SE PUEDE COPIAR CARPETAS
-	public static void copyFileToFolder(String fileId, String folderId) throws IOException, GeneralSecurityException {
+	public static void copyFileToFolder(String fileId, String folderId,Drive credentials) throws IOException, GeneralSecurityException {
 
 		// 1º Se hace una copia de ese fichero
-		File copy = driveService().files().copy(fileId, new File()).execute();
+		File copy = credentials.files().copy(fileId, new File()).execute();
 
 		// 2º Se mueve esa copia a la carpeta destino
-		moveFileToFolder(copy.getId(), folderId);
+		moveFileToFolder(copy.getId(), folderId,credentials);
 
 	}
 
 	// Tambien sirve para mover carpetas
-	public static void moveFileToFolder(String fileId, String folderId) throws IOException, GeneralSecurityException {
+	public static void moveFileToFolder(String fileId, String folderId,Drive credentials) throws IOException, GeneralSecurityException {
 		// 1º Obtiene la carpeta donde esta el fichero (parents)
-		Get f = driveService().files().get(fileId);
+		Get f = credentials.files().get(fileId);
 		// Set fields es para OBTENER EL CAMPO QUE TU QUIERAS
 		f.setFields("parents, id");
 		File fi = f.execute();
@@ -188,7 +249,7 @@ public class DriveQuickstart {
 
 		// 2º Actualiza el fichero añadiendo como parent la carpeta destino y borrando
 		// la carpeta origen
-		Update update = driveService().files().update(fileId, new File());
+		Update update = credentials.files().update(fileId, new File());
 		update.setFields("id, parents");
 		update.setAddParents(folderId);
 		update.setRemoveParents(parents);
@@ -198,7 +259,7 @@ public class DriveQuickstart {
 
 	}
 
-	public static File uploadFile(String name) throws IOException, GeneralSecurityException {
+	public static File uploadFile(String name, Drive credentials) throws IOException, GeneralSecurityException {
 		File fileMetadata = new File();
 		String type = null;
 
@@ -210,22 +271,22 @@ public class DriveQuickstart {
 		fileMetadata.setName(name);
 		java.io.File filePath = new java.io.File("src/main/resources/files/" + name);
 		FileContent mediaContent = new FileContent(type, filePath);
-		File file = driveService().files().create(fileMetadata, mediaContent).setFields("id").execute();
+		File file = credentials.files().create(fileMetadata, mediaContent).setFields("id").execute();
 		return file;
 
 	}
 
-	public static File getDirectoryByName(String name, String project, String workspace, String owner)
+	public static File getDirectoryByName(String name, String project, String workspace, String owner, Drive credentials)
 			throws IOException, GeneralSecurityException {
 		File res;
 		String pageToken = null;
-		File file = getProjectByName(project, workspace, owner);
+		File file = getProjectByName(project, workspace, owner, credentials);
 		// Si no existe el proyecto no devuelve nada
 		if (file == null) {
 			res = null;
 		} else {
 			do {
-				FileList result = DriveQuickstart.driveService().files().list()
+				FileList result = credentials.files().list()
 						// Busca el fichero dentro del proyecto
 						.setQ("'" + file.getId()
 								+ "' in parents and mimeType='application/vnd.google-apps.folder' and name='" + name
@@ -236,7 +297,7 @@ public class DriveQuickstart {
 				try {
 					res = result.getFiles().get(0);
 				} catch (IndexOutOfBoundsException e) {
-					System.out.println("No se ha encontrado el fichero");
+					//System.out.println("The directory was not found");
 					res = null;
 				}
 				pageToken = result.getNextPageToken();
@@ -245,17 +306,17 @@ public class DriveQuickstart {
 		return res;
 	}
 
-	public static File getFileByName(String name, String project, String workspace, String owner)
+	public static File getFileByName(String name, String project, String workspace, String owner, Drive credentials)
 			throws IOException, GeneralSecurityException {
 		File res;
 		String pageToken = null;
-		File file = getProjectByName(project, workspace, owner);
+		File file = getProjectByName(project, workspace, owner,credentials);
 		// Si no existe el proyecto no devuelve nada
 		if (file == null) {
 			res = null;
 		} else {
 			do {
-				FileList result = DriveQuickstart.driveService().files().list()
+				FileList result = credentials.files().list()
 						// Busca el fichero dentro del proyecto
 						.setQ("'" + file.getId()
 								+ "' in parents and mimeType!='application/vnd.google-apps.folder' and name='" + name
@@ -266,7 +327,7 @@ public class DriveQuickstart {
 				try {
 					res = result.getFiles().get(0);
 				} catch (IndexOutOfBoundsException e) {
-					System.out.println("No se ha encontrado el fichero");
+					System.out.println("The file was not found");
 					res = null;
 				}
 				pageToken = result.getNextPageToken();
@@ -276,17 +337,17 @@ public class DriveQuickstart {
 		return res;
 	}
 
-	public static File getProjectByName(String name, String workspace, String owner)
+	public static File getProjectByName(String name, String workspace, String owner, Drive credentials)
 			throws IOException, GeneralSecurityException {
 		File res;
 		String pageToken = null;
-		File file = getWorkspaceByName(workspace, owner);
+		File file = getWorkspaceByName(workspace, owner, credentials);
 		// Si no existe el workspace no devuelve nada
 		if (file == null) {
 			res = null;
 		} else {
 			do {
-				FileList result = DriveQuickstart.driveService().files().list()
+				FileList result = credentials.files().list()
 						// Busca el proyecto dentro del workspace
 						.setQ("'" + file.getId()
 								+ "' in parents and mimeType='application/vnd.google-apps.folder' and name='" + name
@@ -297,7 +358,7 @@ public class DriveQuickstart {
 				try {
 					res = result.getFiles().get(0);
 				} catch (IndexOutOfBoundsException e) {
-					System.out.println("No se ha encontrado el proyecto");
+					//System.out.println("The project was not found");
 					res = null;
 				}
 				pageToken = result.getNextPageToken();
@@ -305,24 +366,36 @@ public class DriveQuickstart {
 		}
 		return res;
 	}
+	public static GDriveProject getGDriveProjectFromUri(String path,String owner, Drive credentials) throws BadUriException {
+		GDriveProject res=null;
+		String[] split=path.split("/");
+		if (split.length < 2) {
+			throw new BadUriException(
+					"Bad uri, it should contains at 1 separator.");
+		}else {
+			res=new GDriveProject(split[1], split[0], owner, credentials);
+		}
+		return res;
+	}
 
-	public static File getWorkspaceByName(String name, String owner) throws IOException, GeneralSecurityException {
+	public static File getWorkspaceByName(String name, String owner,Drive credentials) throws IOException, GeneralSecurityException {
 		File res;
 		String pageToken = null;
 		do {
-			FileList result = DriveQuickstart.driveService().files().list()
+			FileList result = credentials.files().list()
 					// Busca la carpeta dentro del directorio raiz,
 					// comprueba que sea una carpeta
 					// y que tenga el mismo nombre que el usuario
-					.setQ("'" + getRepoFolder(owner).getId()
+					.setQ("'" + getRepoFolder(owner,credentials).getId()
 							+ "' in parents and mimeType='application/vnd.google-apps.folder' and name='" + name + "'")
 					.setSpaces("drive").setFields("nextPageToken, files(id, name)").setPageToken(pageToken).execute();
 			// Si no encuentra el workspace devuelve directamente null
 			try {
+				
 				res = result.getFiles().get(0);
 			} catch (IndexOutOfBoundsException e) {
 				res = null;
-				System.out.println("No se ha encontrado el workspace");
+				//System.out.println("The workspace was not found");
 			}
 			pageToken = result.getNextPageToken();
 		} while (pageToken != null);
@@ -330,11 +403,11 @@ public class DriveQuickstart {
 
 	}
 
-	public static File getRepoFolder(String owner) throws IOException, GeneralSecurityException {
+	public static File getRepoFolder(String owner,Drive credentials) throws IOException, GeneralSecurityException {
 		File res = new File();
 		String pageToken = null;
 		do {
-			FileList result = DriveQuickstart.driveService().files().list()
+			FileList result = credentials.files().list()
 					// Busca la carpeta dentro del directorio raiz,
 					// comprueba que sea una carpeta
 					// y que tenga el mismo nombre que el usuario
@@ -346,37 +419,43 @@ public class DriveQuickstart {
 				res = result.getFiles().get(0);
 			} catch (IndexOutOfBoundsException e) {
 				res = null;
-				System.out.println("No se ha encontrado el repositorio");
+				System.out.println("The repository was not found");
 			}
 			pageToken = result.getNextPageToken();
 		} while (pageToken != null);
 		return res;
 	}
 
-	private static void deleteFolder() throws IOException, GeneralSecurityException {
-		Drive service = driveService();
-		String pageToken = null;
-		File f = new File();
-		do {
-			FileList result = service.files().list().setQ("name contains 'New directory'")
-					.setFields("nextPageToken, files(id, name)").setPageToken(pageToken).execute();
-			f = result.getFiles().get(0);
-			pageToken = result.getNextPageToken();
-		} while (pageToken != null);
-		driveService().files().delete(f.getId()).execute();
+	private static void delete(String id,Drive credentials) throws GeneralSecurityException, IOException {
+		Drive service = credentials;
+		service.files().delete(id).execute();
 
 	}
+	public static void upload(Drive credentials) throws IOException, GeneralSecurityException {
 
+		File fileMetadata = new File();
+		fileMetadata.setName("text.txt");
+		java.io.File filePath = new java.io.File("src/main/resources/text.txt");
+		FileContent mediaContent = new FileContent("text/plain", filePath);
+		File file = credentials.files().create(fileMetadata, mediaContent).setFields("id").execute();
+
+		System.out.println("File ID: " + file.getId() + file.getName());
+
+	}
 	public static Drive driveService() throws GeneralSecurityException, IOException {
 		final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
 
-		return new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+		//return new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+		//		.setApplicationName(APPLICATION_NAME).build();
+		return new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, authorize(HTTP_TRANSPORT))
 				.setApplicationName(APPLICATION_NAME).build();
-
 	}
+
+
 
 	// Build a new authorized API client service.
 	public static void list() throws GeneralSecurityException, IOException {
+
 		Drive service = driveService();
 
 		// Print the names and IDs for up to 10 files.
@@ -391,35 +470,20 @@ public class DriveQuickstart {
 			}
 		}
 	}
-
-	public static void upload() throws IOException, GeneralSecurityException {
-		final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-		Drive service = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
-				.setApplicationName(APPLICATION_NAME).build();
-		File fileMetadata = new File();
-		fileMetadata.setName("text.txt");
-		java.io.File filePath = new java.io.File("src/main/resources/text.txt");
-		FileContent mediaContent = new FileContent("text/plain", filePath);
-		File file = service.files().create(fileMetadata, mediaContent).setFields("id").execute();
-
-		System.out.println("File ID: " + file.getId() + file.getName());
-
-	}
-
-	public static String download(String id) throws IOException, GeneralSecurityException {
-		final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
-		Drive service = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
-				.setApplicationName(APPLICATION_NAME)
-
-				.build();
+	public static String download(String id, Drive credentials) throws IOException, GeneralSecurityException {
+		GoogleNetHttpTransport.newTrustedTransport();
+//		Drive service = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
+//				.setApplicationName(APPLICATION_NAME)
+//
+//				.build();
 		String res = "";
 		// Solo funciona con los archivos que se haya subido desde la aplicacion
 
-		File file = driveService().files().get(id).setFields("size").execute();
+		File file = credentials.files().get(id).setFields("size").execute();
 		// executeMediaAndDownloadTo no funciona si el archivo esta vacio
 		if (file.getSize() != 0) {
 			OutputStream outputStream = new ByteArrayOutputStream();
-			service.files().get(id).executeMediaAndDownloadTo(outputStream);
+			credentials.files().get(id).executeMediaAndDownloadTo(outputStream);
 			res=res+outputStream;
 		}
 			
@@ -429,8 +493,15 @@ public class DriveQuickstart {
 
 	}
 
-	public static List<File> folderList() throws GeneralSecurityException, IOException {
-		Drive service = driveService();
+
+
+
+
+
+
+
+	public static List<File> folderList(Drive credentials) throws GeneralSecurityException, IOException {
+		Drive service = credentials;
 		System.out.println("folderList()");
 		// Print the names and IDs for up to 10 files.
 		FileList result = service.files().list()
@@ -445,10 +516,51 @@ public class DriveQuickstart {
 
 	}
 
-	private static boolean hasTheSameName(String name) throws GeneralSecurityException, IOException {
+
+
+
+
+
+
+	
+
+	public static List<File> getFilesByFolderId(String id,Drive credentials) throws IOException, GeneralSecurityException {
+		List<File> res = new ArrayList<>();
+		String pageToken = null;
+		do {
+			FileList result = credentials.files().list().setQ("'" + id + "' in parents")
+					.setSpaces("drive").setFields("nextPageToken, files(id, name, mimeType)").setPageToken(pageToken).execute();
+			for (File f : result.getFiles()) {				
+					res.add(f);									
+			}
+			pageToken = result.getNextPageToken();
+		} while (pageToken != null);
+		return res;
+	}
+
+	public static List<File> getFoldersByFolderId(String id, Drive credentials) throws IOException, GeneralSecurityException {
+		List<File> res=new ArrayList<>();
+		String pageToken = null;
+		do {
+			FileList result = credentials.files().list()
+					// Busca todos los archivos que no sean carpetas
+					.setQ("'" + id + "' in parents and mimeType = 'application/vnd.google-apps.folder'")
+					.setSpaces("drive").setFields("nextPageToken, files(id, name)").setPageToken(pageToken).execute();
+			for (File f : result.getFiles()) {
+				res.add(f);
+			}
+			pageToken = result.getNextPageToken();
+		} while (pageToken != null);
+	return res;
+	}
+	
+
+
+/*
+ 	private static boolean hasTheSameName(String name,Drive credentials) throws GeneralSecurityException, IOException {
 		Boolean same = false;
 		// Busca entre la lista de carpetas si hay alguna carpeta con el mismo nombre
-		List<File> folders = new ArrayList<>(folderList());
+		List<File> folders = new ArrayList<>(folderList(credentials));
 		for (File f : folders) {
 			if (f.getName().contains(name)) {
 				same = true;
@@ -456,14 +568,13 @@ public class DriveQuickstart {
 		}
 		return same;
 	}
-
-	private static String createFolder() throws GeneralSecurityException, IOException {
+ 	private static String createFolder(Drive credentials) throws GeneralSecurityException, IOException {
 		final NetHttpTransport HTTP_TRANSPORT = GoogleNetHttpTransport.newTrustedTransport();
 		Drive service = new Drive.Builder(HTTP_TRANSPORT, JSON_FACTORY, getCredentials(HTTP_TRANSPORT))
 				.setApplicationName(APPLICATION_NAME).build();
 		String res = "";
 		System.out.println("CreateFolder()");
-		if (hasTheSameName("New directory")) {
+		if (hasTheSameName("New directory",credentials)) {
 			System.out.println("Existe una carpeta con el mismo nombre");
 		} else {
 
@@ -478,72 +589,10 @@ public class DriveQuickstart {
 		return res;
 
 	}
-
-	private static File insertFileInFolder() throws GeneralSecurityException, IOException {
-		Drive service = driveService();
-
-		String folderId = getRepoFolder(userAuthenticated()).getId();
-		File fileMetadata = new File();
-		fileMetadata.setName("agua1.png");
-		fileMetadata.setParents(Collections.singletonList(folderId));
-		java.io.File filePath = new java.io.File("src/main/resources/Agua1.png");
-		FileContent mediaContent = new FileContent("image/png", filePath);
-		File file = service.files().create(fileMetadata, mediaContent).setFields("id, parents").execute();
-		System.out.println("File ID: " + file.getId());
-		return file;
-	}
-
-	private static File getFileByName(String name) throws GeneralSecurityException, IOException {
-		File res;
-		Drive service = driveService();
-		String pageToken = null;
-		do {
-			FileList result = service.files().list().setQ("name='" + name + "'")
-					.setFields("nextPageToken, files(id, name)").setPageToken(pageToken).execute();
-			res = result.getFiles().get(0);
-			for (File file : result.getFiles()) {
-				System.out.printf("Found file: %s (%s)\n", file.getName(), file.getId());
-			}
-			pageToken = result.getNextPageToken();
-		} while (pageToken != null);
-		System.out.println(res.getName() + res.getId());
-		return res;
-	}
-
-	public static List<String> getFilesByFolderId(String id) throws IOException, GeneralSecurityException {
-		List<String> res = new ArrayList<>();
-		String pageToken = null;
-		do {
-			FileList result = DriveQuickstart.driveService().files().list().setQ("'" + id + "' in parents")
-					.setSpaces("drive").setFields("nextPageToken, files(id, name)").setPageToken(pageToken).execute();
-			for (File f : result.getFiles()) {
-				res.add(f.getName());
-				System.out.println(f.getName());
-
-			}
-			pageToken = result.getNextPageToken();
-		} while (pageToken != null);
-		return res;
-	}
-
-	private static void getFoldersByFolderId(String id) throws IOException, GeneralSecurityException {
-		String pageToken = null;
-		do {
-			FileList result = DriveQuickstart.driveService().files().list()
-					// Busca todos los archivos que no sean carpetas
-					.setQ("'" + id + "' in parents and mimeType = 'application/vnd.google-apps.folder'")
-					.setSpaces("drive").setFields("nextPageToken, files(id, name)").setPageToken(pageToken).execute();
-			for (File f : result.getFiles()) {
-				System.out.println(f.getName());
-			}
-			pageToken = result.getNextPageToken();
-		} while (pageToken != null);
-	}
-
-	private static File createFolderInFolder() throws GeneralSecurityException, IOException {
-		Drive service = driveService();
+ 	private static File createFolderInFolder(Drive credentials) throws GeneralSecurityException, IOException {
+		Drive service = credentials;
 		System.out.println("CreateFolderInFolder()");
-		String folderId = createFolder();
+		String folderId = createFolder(credentials);
 		File fileMetadata = new File();
 		fileMetadata.setName("New directory");
 		fileMetadata.setFolderColorRgb("#99FF16");
@@ -554,11 +603,39 @@ public class DriveQuickstart {
 		return file;
 	}
 
-	private static void moveFilesBetweenFolders() throws GeneralSecurityException, IOException {
-		Drive service = driveService();
+ 	private static File insertFileInFolder(Drive credentials) throws GeneralSecurityException, IOException {
+		
+
+		String folderId = getRepoFolder(userAuthenticated(), credentials).getId();
+		File fileMetadata = new File();
+		fileMetadata.setName("agua1.png");
+		fileMetadata.setParents(Collections.singletonList(folderId));
+		java.io.File filePath = new java.io.File("src/main/resources/Agua1.png");
+		FileContent mediaContent = new FileContent("image/png", filePath);
+		File file = credentials.files().create(fileMetadata, mediaContent).setFields("id, parents").execute();
+		System.out.println("File ID: " + file.getId());
+		return file;
+	}
+
+	private static void deleteFolder(Drive credentials) throws IOException, GeneralSecurityException {
+		Drive service = credentials;
+		String pageToken = null;
+		File f = new File();
+		do {
+			FileList result = service.files().list().setQ("name contains 'New directory'")
+					.setFields("nextPageToken, files(id, name)").setPageToken(pageToken).execute();
+			f = result.getFiles().get(0);
+			pageToken = result.getNextPageToken();
+		} while (pageToken != null);
+		credentials.files().delete(f.getId()).execute();
+
+	}
+
+	private static void moveFilesBetweenFolders(Drive credentials) throws GeneralSecurityException, IOException {
+		Drive service = credentials;
 		// Se le pasa la id del fichero que devuelve insertFileInFolder
-		String fileId = insertFileInFolder().getId();
-		String folderId = createFolderInFolder().getId();
+		String fileId = insertFileInFolder(credentials).getId();
+		String folderId = createFolderInFolder(credentials).getId();
 		// Retrieve the existing parents to remove
 		File file = service.files().get(fileId).setFields("parents").execute();
 
@@ -573,11 +650,11 @@ public class DriveQuickstart {
 				.setFields("id, parents").execute();
 	}
 
-	private static void getFoldersByRootDirectory() throws IOException, GeneralSecurityException {
+	private static void getFoldersByRootDirectory(Drive credentials) throws IOException, GeneralSecurityException {
 		String pageToken = null;
 		System.out.println("getFoldersByRootDirectory(");
 		do {
-			FileList result = DriveQuickstart.driveService().files().list()
+			FileList result = credentials.files().list()
 					// Busca todos los archivos que no sean carpetas
 					.setQ("'root' in parents and mimeType = 'application/vnd.google-apps.folder'").setSpaces("drive")
 					.setFields("nextPageToken, files(id, name)").setPageToken(pageToken).execute();
@@ -589,10 +666,5 @@ public class DriveQuickstart {
 
 	}
 
-	private static void delete(String id) throws GeneralSecurityException, IOException {
-		Drive service = driveService();
-		service.files().delete(id).execute();
-
-	}
-
+*/
 }

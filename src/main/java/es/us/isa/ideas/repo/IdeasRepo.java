@@ -10,6 +10,8 @@ import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import es.us.isa.ideas.repo.exception.ObjectClassNotValidException;
+import es.us.isa.ideas.repo.gdrive.GDriveRepo;
+import es.us.isa.ideas.repo.impl.fs.FSRepo;
 
 /**
  * The Singleton Class RepoLab.
@@ -29,7 +31,7 @@ public class IdeasRepo implements Serializable {
 	private static String basePathToConfigFile = "";
 
 	/** The repo impl. */
-	private String repoImpl = "";
+	private String	 repoImpl ="";
 
 	private String repoPackage = "";
 
@@ -114,11 +116,15 @@ public class IdeasRepo implements Serializable {
 		return ideasRepo;
 	}
 
-	public static IdeasRepo get(String repoBasePath) {
+	public Repo get(String repoBasePath) {
+		return get(repoBasePath,"");
+	}
+	
+	public Repo get(String repoBasePath, String type) {
 		IdeasRepo repo = get();
 		repo.setRepoBaseUri(repoBasePath);
-		return repo;
-	}
+		return getRepo(type);			
+	}	
 
 	/**
 	 * Gets the repo base uri.
@@ -164,16 +170,24 @@ public class IdeasRepo implements Serializable {
 	 */
 	@SuppressWarnings("unchecked")
 	public <T extends Repo> T getRepo() {
+		return getRepo("");
+	}
+	
+	@SuppressWarnings("unchecked")
+	public <T extends Repo> T getRepo(String type) {
 		T res = null;
 		Class<? extends Repo> c;
-		try {
-			String repoClassName = this.repoPackage + this.repoImpl;
-			c = (Class<? extends Repo>) Class.forName(repoClassName);
-			Constructor<?> ctor = c.getConstructor();
-			res = (T) ctor.newInstance();
-		} catch (Exception e) {
-			e.printStackTrace();
-		}
+		if(type==null  || "".equals(type) || !"GDRIVE".contentEquals(type)) {
+			try {			
+				String repoClassName = this.repoPackage + this.repoImpl;
+				c = (Class<? extends Repo>) Class.forName(repoClassName);
+				Constructor<?> ctor = c.getConstructor();
+				res = (T) ctor.newInstance();
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
+		}else
+			res=(T)new GDriveRepo(null);
 		return res;
 	}
 

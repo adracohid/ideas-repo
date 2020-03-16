@@ -2,17 +2,15 @@ package es.us.isa.ideas.repo.gdrive;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
-import java.util.ArrayList;
 import java.util.Collections;
-import java.util.List;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
+import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
 
 import es.us.isa.ideas.repo.Directory;
 import es.us.isa.ideas.repo.IdeasRepo;
-import es.us.isa.ideas.repo.Node;
 import es.us.isa.ideas.repo.exception.ObjectClassNotValidException;
 import es.us.isa.ideas.repo.impl.fs.FSNode;
 import es.us.isa.ideas.repo.impl.fs.FSNodeIcon;
@@ -20,9 +18,19 @@ import es.us.isa.ideas.repo.operation.Listable;
 
 public class GDriveDirectory extends Directory {
 	private static final Logger LOGGER = Logger.getLogger(GDriveDirectory.class.getName());
+	private Drive credentials;
 
-	public GDriveDirectory(String name, String workspace, String project, String owner) {
+	public GDriveDirectory(String name, String workspace, String project, String owner, Drive credentials) {
 		super(name, workspace, project, owner);
+		this.credentials = credentials;
+	}
+
+	public Drive getCredentials() {
+		return credentials;
+	}
+
+	public void setCredentials(Drive credentials) {
+		this.credentials = credentials;
 	}
 
 	@Override
@@ -30,36 +38,40 @@ public class GDriveDirectory extends Directory {
 		boolean res = false;
 		try {
 			File directory = DriveQuickstart.getDirectoryByName(this.getName(), this.getProject(), this.getWorkspace(),
-					this.getOwner());
+					this.getOwner(), this.credentials);
 			if (directory == null) {
 				LOGGER.log(Level.INFO, "Directory " + this.getName() + " does not exist.");
 
 			} else {
-				//Comprobamos que la carpeta destino sea un proyecto
-				if(!(dest instanceof GDriveProject)) {
+				// Comprobamos que la carpeta destino sea un proyecto
+				if (!(dest instanceof GDriveProject)) {
 					LOGGER.log(Level.INFO, "The target folder must be a project");
-				}else {
-				System.out.println(IdeasRepo.get().getObjectFullUri(dest));
-				String[] s1 = IdeasRepo.get().getObjectFullUri(dest).split("//");
-				String[] s2 = s1[1].split("/");
-				File project = DriveQuickstart.getProjectByName(s2[s2.length - 1], s2[s2.length - 2],
-						s2[s2.length - 3]);
-				if (project == null) {
-					LOGGER.log(Level.INFO, "Project " + dest.getClass().getName() + " does not exist.");
-
 				} else {
-					if (!DriveQuickstart.getFilesByFolderId(project.getId()).contains(directory.getName())) {
-						// En este caso solo se permite mover carpetas
-						DriveQuickstart.moveFileToFolder(directory.getId(), project.getId());
-						res=true;
-					} else {
-						LOGGER.log(Level.INFO, "Cannot move a folder with the same name.");
+					System.out.println(IdeasRepo.get().getObjectFullUri(dest));
+					String[] s1 = IdeasRepo.get().getObjectFullUri(dest).split("//");
+					String[] s2 = s1[1].split("/");
+					File project = DriveQuickstart.getProjectByName(s2[s2.length - 1], s2[s2.length - 2],
+							s2[s2.length - 3], this.credentials);
+					if (project == null) {
+						LOGGER.log(Level.INFO, "Project " + dest.getClass().getName() + " does not exist.");
 
+					} else {
+						// Comprobar que directory no este en el proyecto destino
+						File directoryInProject = DriveQuickstart.getDirectoryByName(this.getName(), project.getName(),
+								this.getWorkspace(), this.getOwner(), this.credentials);
+						if (directoryInProject == null) {
+							// En este caso solo se permite mover carpetas
+							DriveQuickstart.moveFileToFolder(directory.getId(), project.getId(), credentials);
+							res = true;
+						} else {
+							LOGGER.log(Level.INFO, "Cannot move a folder with the same name.");
+
+						}
 					}
 				}
 			}
-			}
-		} catch (IOException | GeneralSecurityException|ObjectClassNotValidException e) {
+		} catch (IOException | GeneralSecurityException | ObjectClassNotValidException
+				| ArrayIndexOutOfBoundsException e) {
 			e.printStackTrace();
 		}
 		return res;
@@ -71,12 +83,12 @@ public class GDriveDirectory extends Directory {
 		// Obtenemos la carpeta
 		try {
 			com.google.api.services.drive.model.File file = DriveQuickstart.getDirectoryByName(this.getName(),
-					this.getProject(), this.getWorkspace(), this.getOwner());
+					this.getProject(), this.getWorkspace(), this.getOwner(), this.credentials);
 			if (file == null) {
 				LOGGER.log(Level.INFO, "Directory " + this.getName() + " does not exist.");
 
 			} else {
-				DriveQuickstart.driveService().files().delete(file.getId()).execute();
+				this.credentials.files().delete(file.getId()).execute();
 				res = true;
 			}
 		} catch (IOException | GeneralSecurityException e) {
@@ -92,43 +104,48 @@ public class GDriveDirectory extends Directory {
 		try {
 			// Obtener el workspace donde se va a guardar el archivo
 			com.google.api.services.drive.model.File workspace = DriveQuickstart.getWorkspaceByName(this.getWorkspace(),
-					this.getOwner());
+					this.getOwner(), this.credentials);
 			// Comprobar que el workspace existe
 			if (workspace == null) {
 				LOGGER.log(Level.INFO, "Workspace " + this.getWorkspace() + " does not exist.");
 
 			} else {
-				// Obtener el proyecto donde se va a guardar el fichero
+				// Obtener el proyecto donde se va a guardar el directorio
 				com.google.api.services.drive.model.File project = DriveQuickstart.getProjectByName(this.getProject(),
-						this.getWorkspace(), this.getOwner());
+						this.getWorkspace(), this.getOwner(), this.credentials);
 				// Comprobar que el proyecto existe
 				if (project == null) {
 					LOGGER.log(Level.INFO, "Project " + this.getProject() + " does not exist.");
 
 				} else {
-					// Creamos el fichero
-					com.google.api.services.drive.model.File fileMetadata = new com.google.api.services.drive.model.File();
-
-					fileMetadata.setMimeType("application/vnd.google-apps.folder");
-
-					fileMetadata.setName(this.getName());
-					fileMetadata.setParents(Collections.singletonList(project.getId()));
-
-					// Comprobamos que no se crea una carpeta con el mismo nombre
-					if (DriveQuickstart.getFilesByFolderId(project.getId()).contains(fileMetadata.getName())) {
+					// Comprobamos que no exista un directorio con el mismo nombre
+					com.google.api.services.drive.model.File directory = DriveQuickstart.getDirectoryByName(
+							this.getName(), this.getProject(), this.getWorkspace(), this.getOwner(),
+							this.getCredentials());
+					if (directory != null) {
 						LOGGER.log(Level.INFO, "Directory " + this.getName() + " already exist");
-
 					} else {
-						// Guardamos la carpeta
-						com.google.api.services.drive.model.File f = DriveQuickstart.driveService().files()
-								.create(fileMetadata).setFields("id").execute();
+						// Creamos el fichero
+						com.google.api.services.drive.model.File fileMetadata = new com.google.api.services.drive.model.File();
 
+						fileMetadata.setMimeType("application/vnd.google-apps.folder");
+
+						fileMetadata.setName(this.getName());
+						fileMetadata.setParents(Collections.singletonList(project.getId()));
+
+						// Guardamos la carpeta
+						this.credentials.files().create(fileMetadata).setFields("id").execute();
+						res = true;
 					}
-					res = true;
 
 				}
+			
+
 			}
-		} catch (GeneralSecurityException e) {
+
+		} catch (
+
+		GeneralSecurityException e) {
 			e.printStackTrace();
 
 		} catch (IOException e) {
@@ -146,24 +163,15 @@ public class GDriveDirectory extends Directory {
 		res.setTitle(this.getName());
 		res.setFolder(true);
 		res.setIcon(FSNodeIcon.FOLDER);
-		List<Node> children = new ArrayList<>();
 		try {
 			File folder = DriveQuickstart.getDirectoryByName(this.getName(), this.getProject(), this.getWorkspace(),
-					this.getOwner());
+					this.getOwner(), this.credentials);
 			if (folder == null) {
 				LOGGER.log(Level.INFO, "Directory " + this.getName() + " does not exist.");
 				res = null;
 
 			} else {
-
-				List<String> files = new ArrayList<>(DriveQuickstart.getFilesByFolderId(folder.getId()));
-				// Los hijos del nodo son todos los ficheros de esa carpeta
-				for (String s : files) {
-					FSNode child = new FSNode();
-					child.setTitle(s);
-					children.add(child);
-				}
-				res.setChildren(children);
+				res.setChildren(GDriveNode.getChildren(folder.getId(), credentials));
 
 			}
 		} catch (IOException | GeneralSecurityException e) {
@@ -176,7 +184,7 @@ public class GDriveDirectory extends Directory {
 		boolean res = false;
 		try {
 			if (DriveQuickstart.getDirectoryByName(this.getName(), this.getProject(), this.getWorkspace(),
-					this.getOwner()) != null) {
+					this.getOwner(), this.credentials) != null) {
 				res = true;
 			}
 		} catch (IOException | GeneralSecurityException e) {
@@ -185,4 +193,5 @@ public class GDriveDirectory extends Directory {
 
 		return res;
 	}
+
 }

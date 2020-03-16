@@ -19,7 +19,6 @@ import es.us.isa.ideas.repo.exception.AuthenticationException;
 import es.us.isa.ideas.repo.exception.BadUriException;
 import es.us.isa.ideas.repo.exception.ObjectClassNotValidException;
 import es.us.isa.ideas.repo.impl.fs.FSDirectory;
-import es.us.isa.ideas.repo.impl.fs.FSFacade;
 import es.us.isa.ideas.repo.impl.fs.FSFile;
 import es.us.isa.ideas.repo.impl.fs.FSNode;
 import es.us.isa.ideas.repo.impl.fs.FSProject;
@@ -63,7 +62,7 @@ public class FSTest {
 	public static void teardownClass() throws AuthenticationException, BadUriException {
 		FSWorkspace workspace2 = new FSWorkspace("workspace2", userAuthenticated());
 		workspace2.delete();
-		FSFile history = FSFacade.getFileFromUri("//.history", userAuthenticated());
+		FSFile history = (FSFile) Facade.getFileFromUri("//.history", userAuthenticated());
 		history.delete();
 	}
 	
@@ -91,6 +90,7 @@ public class FSTest {
 
 		IdeasRepo irepo = new IdeasRepo();
 		File ws = new File(IdeasRepo.get().getObjectFullUri(workspace));
+		
 		assertTrue(ws.exists());
 		System.out.println("\nTest Save Workspace =================================");
 		System.out.println("URI Workspace1: " + irepo.getObjectFullUri(workspace));
@@ -136,7 +136,7 @@ public class FSTest {
 		FSRepo repo = new FSRepo();
 		repo.saveSelectedWorkspace(workspace2().getName(), userAuthenticated());
 
-		FSFile history = FSFacade.getFileFromUri("//.history", userAuthenticated());
+		FSFile history = (FSFile) Facade.getFileFromUri("//.history", userAuthenticated());
 		System.out.println(history.readAsString());
 
 		// Comprobar que se ha creado el fichero .history

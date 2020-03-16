@@ -1,4 +1,4 @@
-package es.us.isa.ideas.repo.impl.fs;
+package es.us.isa.ideas.repo;
 
 import java.io.File;
 import java.io.FileOutputStream;
@@ -6,37 +6,50 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.file.Files;
 import java.nio.file.Path;
+import java.security.GeneralSecurityException;
 import java.util.Calendar;
 import java.util.List;
 
+import org.apache.commons.io.FileUtils;
+import org.apache.commons.io.IOUtils;
+
+import com.google.api.services.drive.Drive;
+
+import es.us.isa.ideas.repo.exception.AuthenticationException;
+import es.us.isa.ideas.repo.exception.BadUriException;
+import es.us.isa.ideas.repo.exception.ObjectClassNotValidException;
+import es.us.isa.ideas.repo.gdrive.DriveQuickstart;
+import es.us.isa.ideas.repo.gdrive.GDriveDirectory;
+import es.us.isa.ideas.repo.gdrive.GDriveFile;
+import es.us.isa.ideas.repo.gdrive.GDriveProject;
+import es.us.isa.ideas.repo.gdrive.GDriveRepo;
+import es.us.isa.ideas.repo.gdrive.GDriveWorkspace;
+import es.us.isa.ideas.repo.impl.fs.FSDirectory;
+import es.us.isa.ideas.repo.impl.fs.FSFile;
+import es.us.isa.ideas.repo.impl.fs.FSNode;
+import es.us.isa.ideas.repo.impl.fs.FSProject;
+import es.us.isa.ideas.repo.impl.fs.FSRepo;
+import es.us.isa.ideas.repo.impl.fs.FSWorkspace;
+import es.us.isa.ideas.repo.operation.Listable;
 import net.lingala.zip4j.core.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
 import net.lingala.zip4j.io.ZipInputStream;
 import net.lingala.zip4j.model.FileHeader;
 import net.lingala.zip4j.unzip.UnzipUtil;
 
-import org.apache.commons.io.FileUtils;
-import org.apache.commons.io.IOUtils;
-
-import es.us.isa.ideas.repo.IdeasRepo;
-import es.us.isa.ideas.repo.exception.AuthenticationException;
-import es.us.isa.ideas.repo.exception.BadUriException;
-import es.us.isa.ideas.repo.exception.ObjectClassNotValidException;
-import es.us.isa.ideas.repo.operation.Listable;
-
-public class FSFacade {
+public class Facade {
 
 	private static String SEPARATOR = System.getProperty("file.separator");
-
+	//Ideas-repo file system 
 	public static boolean createFile(String uri, String owner)
 			throws BadUriException, AuthenticationException {
-		FSFile fsFile = getFileFromUri(uri, owner);
+		es.us.isa.ideas.repo.File fsFile = getFileFromUri(uri, owner);
 		return IdeasRepo.get().getRepo().create(fsFile);
 	}
-
-	public static FSFile getFileFromUri(String uri, String owner)
+	
+	public static es.us.isa.ideas.repo.File getFileFromUri(String uri, String owner)
 			throws BadUriException {
-		FSFile fsFile = null;
+		es.us.isa.ideas.repo.File fsFile = null;
 		String[] uriArray = splitURI(uri);
 		if (uriArray.length < 3) {
 			throw new BadUriException("Bad uri: " + uri);
@@ -50,7 +63,9 @@ public class FSFacade {
 				nameUri += SEPARATOR;
 			}
 		}
-		fsFile = new FSFile(nameUri, workspace, project, owner);
+		Repo repo=IdeasRepo.get().getRepo();
+		String [] params ={nameUri, workspace, project, owner};
+		fsFile = (es.us.isa.ideas.repo.File)repo.generate(es.us.isa.ideas.repo.File.class, params);
 		return fsFile;
 	}
 
@@ -68,8 +83,10 @@ public class FSFacade {
 		}
 		return l;
 	}
+	
 
-	private static FSProject getProjectFromUri(String uri, String owner)
+
+	private static Project getProjectFromUri(String uri, String owner)
 			throws BadUriException {
 		FSProject fsProject = null;
 		String uriArray[] = splitURI(uri);
@@ -114,7 +131,7 @@ public class FSFacade {
 	public static String getWorkspaceTree(String wsName, String owner)
 			throws AuthenticationException {
 		FSWorkspace ws = new FSWorkspace(wsName, owner);
-		FSNode wsNode = IdeasRepo.get().getRepo().list(ws);
+		Node wsNode = IdeasRepo.get().getRepo().list(ws);
 		String resp = "[";
 		for (int i = 0; i < wsNode.getChildren().size(); i++) {
 			if (i != 0) {
@@ -130,7 +147,7 @@ public class FSFacade {
 	public static String getProjectTree(String wsName, String owner,
 			String project) throws AuthenticationException {
 		FSWorkspace ws = new FSWorkspace(wsName, owner);
-		FSNode wsNode = IdeasRepo.get().getRepo().list(ws);
+		Node wsNode = IdeasRepo.get().getRepo().list(ws);
 		String result = "";
 		for (int i = 0; i < wsNode.getChildren().size(); i++) {
 			FSNode fsChild = (FSNode) wsNode.getChildren().get(i);
@@ -148,31 +165,31 @@ public class FSFacade {
 
 	public static String getFileContent(String fileUri, String owner)
 			throws BadUriException, AuthenticationException {
-		FSFile fsFile = getFileFromUri(fileUri, owner);
+		es.us.isa.ideas.repo.File fsFile = getFileFromUri(fileUri, owner);
 		return IdeasRepo.get().getRepo().readAsString(fsFile);
 	}
 
 	public static byte[] getFileContentAsBytes(String fileUri, String owner)
 			throws BadUriException, AuthenticationException {
-		FSFile fsFile = getFileFromUri(fileUri, owner);
+		FSFile fsFile = (FSFile) getFileFromUri(fileUri, owner);
 		return IdeasRepo.get().getRepo().readAsBytes(fsFile);
 	}
 
 	public static boolean setFileContent(String fileUri, String owner,
 			String fileContent) throws BadUriException, AuthenticationException {
-		FSFile fsFile = getFileFromUri(fileUri, owner);
+		es.us.isa.ideas.repo.File fsFile = getFileFromUri(fileUri, owner);
 		return IdeasRepo.get().getRepo().write(fsFile, fileContent);
 	}
 
 	public static boolean setFileContent(String fileUri, String owner,
 			byte[] fileContent) throws BadUriException, AuthenticationException {
-		FSFile fsFile = getFileFromUri(fileUri, owner);
+		es.us.isa.ideas.repo.File fsFile = getFileFromUri(fileUri, owner);
 		return IdeasRepo.get().getRepo().write(fsFile, fileContent);
 	}
 
 	public static boolean createProject(String projectUri, String owner)
 			throws BadUriException, AuthenticationException {
-		FSProject fsProject = getProjectFromUri(projectUri, owner);
+		Project fsProject = getProjectFromUri(projectUri, owner);
 		return IdeasRepo.get().getRepo().create(fsProject);
 	}
 
@@ -184,19 +201,19 @@ public class FSFacade {
 
 	public static boolean deleteFile(String fileUri, String owner)
 			throws BadUriException, AuthenticationException {
-		FSFile fsFile = getFileFromUri(fileUri, owner);
+		es.us.isa.ideas.repo.File fsFile = getFileFromUri(fileUri, owner);
 		return IdeasRepo.get().getRepo().delete(fsFile);
 	}
 
 	public static boolean deleteDirectory(String dirUri, String owner)
 			throws AuthenticationException, BadUriException {
-		FSDirectory fsDir = getDirectoryFromUri(dirUri, owner);
+		Directory fsDir = getDirectoryFromUri(dirUri, owner);
 		return IdeasRepo.get().getRepo().delete(fsDir);
 	}
 
 	public static boolean deleteProject(String projUri, String owner)
 			throws AuthenticationException, BadUriException {
-		FSProject fsProj = getProjectFromUri(projUri, owner);
+		 FSProject fsProj = (FSProject) getProjectFromUri(projUri, owner);
 		return IdeasRepo.get().getRepo().delete(fsProj);
 	}
 
@@ -209,7 +226,7 @@ public class FSFacade {
 	public static boolean moveFile(String fileUri, String owner,
 			String destUri, boolean copy) throws BadUriException,
 			AuthenticationException {
-		FSFile fsFile = getFileFromUri(fileUri, owner);
+		FSFile fsFile = (FSFile) getFileFromUri(fileUri, owner);
 		Listable dest = getListableFromUri(destUri, owner);
 		return IdeasRepo.get().getRepo().move(fsFile, dest, copy);
 	}
@@ -226,7 +243,7 @@ public class FSFacade {
 			String newName) throws BadUriException, AuthenticationException {
 		boolean res = false;
 		try {
-			FSFile fsFile = getFileFromUri(fileUri, owner);
+			FSFile fsFile = (FSFile) getFileFromUri(fileUri, owner);
 			res = fsFile.rename(newName);
 		} catch (Exception e) {
 			e.printStackTrace();
@@ -264,18 +281,19 @@ public class FSFacade {
 
 	public static void saveSelectedWorkspace(String workspaceName, String owner)
 			throws IOException {
-		if (IdeasRepo.get().getRepo() instanceof FSRepo) {
+		//if (IdeasRepo.get().getRepo() instanceof FSRepo) {
 			FSRepo fsRep = (FSRepo) IdeasRepo.get().getRepo();
 			fsRep.saveSelectedWorkspace(workspaceName, owner);
-		}
+		//}
+		
 	}
 
 	public static String getSelectedWorkspace(String owner) throws IOException {
 		String ret = "";
-		if (IdeasRepo.get().getRepo() instanceof FSRepo) {
+		//if (IdeasRepo.get().getRepo() instanceof FSRepo) {
 			FSRepo fsRep = (FSRepo) IdeasRepo.get().getRepo();
 			ret = fsRep.getSelectedWorkspace(owner);
-		}
+		//}
 		return ret;
 	}
 
@@ -291,14 +309,14 @@ public class FSFacade {
 
 	public static void saveFileContentAsZip(String fileUri, String username,
 			OutputStream os) throws BadUriException, AuthenticationException {
-		FSFile fsFile = getFileFromUri(fileUri, username);
+		FSFile fsFile = (FSFile) getFileFromUri(fileUri, username);
 		fsFile.saveAsZip(os);
 	}
 
 	public static void saveProjectContentAsZip(String projectUri,
 			String username, OutputStream os) throws BadUriException,
 			AuthenticationException {
-		FSProject fsProject = getProjectFromUri(projectUri, username);
+		FSProject fsProject = (FSProject) getProjectFromUri(projectUri, username);
 		fsProject.saveAsZip(os);
 	}
 
@@ -317,7 +335,7 @@ public class FSFacade {
 
 	public static void extractIn(String folderUri, String username, File f)
 			throws BadUriException, ObjectClassNotValidException, IOException {
-		FSProject fsProject = getProjectFromUri(folderUri, username);
+		FSProject fsProject = (FSProject) getProjectFromUri(folderUri, username);
 
 		File folder = new File(IdeasRepo.get().getObjectFullUri(fsProject));
 		if (!folder.exists()) {
@@ -411,7 +429,7 @@ public class FSFacade {
 						+ fh.getFileName().substring(0,
 								fh.getFileName().lastIndexOf('.'));
 
-				FSProject fsProject = getProjectFromUri(filePath, username);
+				FSProject fsProject = (FSProject) getProjectFromUri(filePath, username);
 
 				File folder = new File(IdeasRepo.get().getObjectFullUri(
 						fsProject));
@@ -453,5 +471,209 @@ public class FSFacade {
 		}
 
 	}
+	
+	//Google Drive file system
+	
+	public static boolean createGDriveWorkspace(String wsName, String owner, Drive credentials)
+			throws AuthenticationException {
+		
+		GDriveWorkspace gdw=new GDriveWorkspace(wsName, owner,credentials);
+		return IdeasRepo.get().getRepo("GDRIVE").create(gdw);
+	}
 
+
+	public static String getGDriveWorkspaces(String user, Drive credentials) 
+		throws AuthenticationException {
+		GDriveRepo gdrepo= IdeasRepo.get().getRepo("GDRIVE");
+		return gdrepo.getWorkspaces(user, credentials);
+		
+	}
+	
+	public static boolean deleteGDriveWorkspace(String dirWs, String owner,Drive credentials)
+			throws AuthenticationException, BadUriException {
+		GDriveWorkspace gdw=new GDriveWorkspace(dirWs, owner,credentials);
+		return IdeasRepo.get().getRepo("GDRIVE").delete(gdw);
+	}
+	
+	public static boolean createGDriveProject(String projectUri, String owner, Drive credentials)
+			throws BadUriException, AuthenticationException {
+		Project fsProject = getGDriveProjectFromUri(projectUri, owner, credentials);
+		return IdeasRepo.get().getRepo("GDRIVE").create(fsProject);
+	}
+
+	
+	public static GDriveProject getGDriveProjectFromUri(String path,String owner, Drive credentials) throws BadUriException {
+		GDriveProject res=null;
+		String[] split=path.split("/");
+		if (split.length < 2) {
+			throw new BadUriException(
+					"Bad uri, it should contains at 1 separator.");
+		}else {
+			res=new GDriveProject(split[1], split[0], owner, credentials);
+		}
+		return res;
+	}
+	
+	public static boolean createGDriveFile(String uri, String owner, Drive credentials)
+			throws BadUriException, AuthenticationException {
+		GDriveFile fsFile=getGDriveFileFromUri(uri, owner, credentials);
+		
+		return IdeasRepo.get().getRepo("GDRIVE").create(fsFile);
+	}
+	public static GDriveFile getGDriveFileFromUri(String path, String owner, Drive credentials) throws BadUriException {
+		GDriveFile res=null;
+		String[] split=path.split("/");
+		 if(split.length<3) {
+			 throw new BadUriException(
+						"Bad uri, it should contains at 1 separator.");
+		 }else {
+			 res=new GDriveFile(split[2],split[0],split[1],owner, credentials);
+		 }
+		 return res;
+	}
+	//TODO
+	public static boolean createGDriveDirectory(String dirUri, String owner, Drive credentials)
+			throws AuthenticationException, BadUriException {
+		GDriveDirectory fsDir=getGDriveDirectoryFromUri(dirUri,owner, credentials);
+		return IdeasRepo.get().getRepo("GDRIVE").create(fsDir);
+	}
+
+	private static GDriveDirectory getGDriveDirectoryFromUri(String dirUri, String owner, Drive credentials) throws BadUriException {
+		GDriveDirectory res=null;
+		String[] split=dirUri.split("/");
+		 if(split.length<3) {
+			 throw new BadUriException(
+						"Bad uri, it should contains at 1 separator.");
+		 }else {
+			 res=new GDriveDirectory(split[2],split[0],split[1],owner, credentials);
+		 }
+		return res;
+	}
+	
+	public static String getGDriveFileContent(String fileUri, String owner, Drive credentials)
+			throws BadUriException, AuthenticationException {
+		GDriveFile file=getGDriveFileFromUri(fileUri, owner, credentials);
+		return IdeasRepo.get().getRepo("GDRIVE").readAsString(file);
+	}
+
+	public static byte[] getGDriveFileContentAsBytes(String fileUri, String owner, Drive credentials)
+			throws BadUriException, AuthenticationException {
+		GDriveFile file=getGDriveFileFromUri(fileUri, owner, credentials);
+		return IdeasRepo.get().getRepo("GDRIVE").readAsBytes(file);
+	}
+
+	public static boolean setGDriveFileContent(String fileUri, String owner,
+			String fileContent, Drive credentials) throws BadUriException, AuthenticationException {
+		GDriveFile file=getGDriveFileFromUri(fileUri, owner, credentials);
+		return IdeasRepo.get().getRepo("GDRIVE").write(file, fileContent);
+	}
+
+	public static boolean setGDriveFileContent(String fileUri, String owner,
+			byte[] fileContent, Drive credentials) throws BadUriException, AuthenticationException {
+		GDriveFile file=getGDriveFileFromUri(fileUri, owner, credentials);
+		return IdeasRepo.get().getRepo("GDRIVE").write(file, fileContent);
+}
+	
+	public static String getGDriveWorkspaceTree(String wsName, String owner,Drive credentials)
+			throws AuthenticationException {
+		GDriveWorkspace w=new GDriveWorkspace(wsName, owner,credentials);
+		
+		Node wsNode=IdeasRepo.get().getRepo("GDRIVE").list(w);
+		
+		String resp = "[";
+		for (int i = 0; i < wsNode.getChildren().size(); i++) {
+			if (i != 0) {
+				resp += ",";
+			}
+			FSNode fsChild = (FSNode) wsNode.getChildren().get(i);
+			resp += fsChild.toString();
+		}
+		resp += "]";
+		return resp;
+		
+		
+	}
+		
+	
+	
+	public static String getGDriveProjectTree(String wsName, String owner,
+			String project, Drive credentials) throws AuthenticationException{
+		
+		GDriveWorkspace gw=new GDriveWorkspace(wsName,owner,credentials);
+		
+		Node wsNode = IdeasRepo.get().getRepo("GDRIVE").list(gw);
+		String result = "";
+		for (int i = 0; i < wsNode.getChildren().size(); i++) {
+			FSNode fsChild = (FSNode) wsNode.getChildren().get(i);
+			if (fsChild.getTitle().equals(project))
+				result = fsChild.toString();
+		}
+		return result;
+		
+		
+	}
+
+	
+	
+	public static boolean deleteGDriveProject(String projUri, String owner, Drive credentials)
+			throws AuthenticationException, BadUriException {
+		 GDriveProject p=getGDriveProjectFromUri(projUri, owner, credentials);
+		return IdeasRepo.get().getRepo("GDRIVE").delete(p);
+	}
+	public static boolean deleteGDriveFile(String fileUri, String owner, Drive credentials)
+			throws BadUriException, AuthenticationException {
+		GDriveFile f=getGDriveFileFromUri(fileUri, owner, credentials);
+		return IdeasRepo.get().getRepo("GDRIVE").delete(f);
+	}
+	
+	public static boolean deleteGDriveDirectory(String dirUri, String owner, Drive credentials)
+			throws AuthenticationException, BadUriException {
+		GDriveDirectory d=getGDriveDirectoryFromUri(dirUri, owner, credentials);
+		return IdeasRepo.get().getRepo("GDRIVE").delete(d);
+	}
+	
+	public static boolean moveGDriveDirectory(String dirUri, String owner,
+			String destUri, boolean copy, Drive credentials) throws BadUriException,
+			AuthenticationException {
+		GDriveDirectory fsDir = getGDriveDirectoryFromUri(dirUri, owner, credentials);
+		Listable dest = getGListableFromUri(destUri, owner, credentials);
+		return IdeasRepo.get().getRepo("GDRIVE").move(fsDir, dest, copy);
+	}
+	
+	public static Listable getGListableFromUri(String uri, String owner, Drive credentials)
+			throws BadUriException {
+		Listable l = null;
+
+		String[] uriArray = splitURI(uri);
+		if (uriArray.length == 2) {
+			l = getGDriveProjectFromUri(uri, owner, credentials);
+		} else if (uriArray.length > 2) {
+			l = getGDriveDirectoryFromUri(uri, owner, credentials);
+		} else {
+			throw new BadUriException();
+		}
+		return l;
+	}
+	public static boolean moveGDriveFile(String fileUri, String owner,
+			String destUri, boolean copy, Drive credentials) throws BadUriException,
+			AuthenticationException {
+		GDriveFile f=getGDriveFileFromUri(fileUri, owner, credentials);
+		Listable dest = getGListableFromUri(destUri, owner, credentials);
+		return IdeasRepo.get().getRepo("GDRIVE").move(f, dest, copy);
+	}
+	public static boolean renameGDriveFile(String fileUri, String owner,
+			String newName, Drive credentials) throws IOException, GeneralSecurityException, BadUriException {
+		GDriveFile f=getGDriveFileFromUri(fileUri, owner, credentials);
+		com.google.api.services.drive.model.File gf=DriveQuickstart.getFileByName(f.getName(), f.getProject(), f.getWorkspace(), owner, credentials);
+		return DriveQuickstart.renameFile(gf.getId(), newName, credentials);
+	
+	}
+	
+	public static boolean renameGDriveDirectory(String fileUri, String owner,
+			String newName, Drive credentials) throws IOException, GeneralSecurityException, BadUriException {
+		GDriveDirectory f=getGDriveDirectoryFromUri(fileUri, owner, credentials);
+		com.google.api.services.drive.model.File gf=DriveQuickstart.getDirectoryByName(f.getName(), f.getProject(), f.getWorkspace(), owner, credentials);
+		return DriveQuickstart.renameFile(gf.getId(), newName, credentials);
+	
+	}
 }

@@ -5,7 +5,6 @@ import static org.junit.Assert.*;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.junit.After;
@@ -14,10 +13,11 @@ import org.junit.Before;
 import org.junit.BeforeClass;
 import org.junit.Test;
 
+import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
-import com.google.api.services.drive.model.FileList;
 
 import es.us.isa.ideas.repo.exception.AuthenticationException;
+import es.us.isa.ideas.repo.exception.BadUriException;
 import es.us.isa.ideas.repo.exception.ObjectClassNotValidException;
 import es.us.isa.ideas.repo.gdrive.DriveQuickstart;
 import es.us.isa.ideas.repo.gdrive.GDriveDirectory;
@@ -25,11 +25,12 @@ import es.us.isa.ideas.repo.gdrive.GDriveFile;
 import es.us.isa.ideas.repo.gdrive.GDriveProject;
 import es.us.isa.ideas.repo.gdrive.GDriveWorkspace;
 import es.us.isa.ideas.repo.impl.fs.FSFile;
-import es.us.isa.ideas.repo.impl.fs.FSProject;
-import es.us.isa.ideas.repo.impl.fs.FSWorkspace;
-import junit.framework.Assert;
+import es.us.isa.ideas.repo.impl.fs.FSRepo;
 
 public class GDriveTest {
+	private static String user;
+	private static Drive credentials;
+
 	private static String userAuthenticated() {
 		DummyAuthenticationManagerDelegate authDelegate = new DummyAuthenticationManagerDelegate("yo");
 		IdeasRepo.setAuthManagerDelegate(authDelegate);
@@ -37,28 +38,49 @@ public class GDriveTest {
 	}
 
 	// Crea una carpeta de repositorio antes de comenzar los test
+
+	
+
+	private static void deleteGDriveWorkspace(String owner) {
+		File repoFolder;
+		try {
+			repoFolder = DriveQuickstart.getRepoFolder(owner, credentials);
+
+			List<File> folders = new ArrayList<>(DriveQuickstart.getFoldersByFolderId(repoFolder.getId(), credentials));
+			for (File f : folders) {
+				Facade.deleteGDriveWorkspace(f.getName(), user, credentials);
+			}
+		} catch (IOException | GeneralSecurityException | AuthenticationException | BadUriException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+
 	@BeforeClass
+
 	public static void setUpBeforeClass() throws Exception {
-		File fileMetadata = new File();
-		fileMetadata.setName(userAuthenticated());
-		fileMetadata.setMimeType("application/vnd.google-apps.folder");
-		DriveQuickstart.driveService().files().create(fileMetadata).setFields("id").execute();
+		user = userAuthenticated();
+		credentials = DriveQuickstart.driveService();
+		/*
+		 * No hace falta File fileMetadata = new File();
+		 * fileMetadata.setName(userAuthenticated());
+		 * fileMetadata.setMimeType("application/vnd.google-apps.folder");
+		 * DriveQuickstart.driveService().files().create(fileMetadata).setFields("id").
+		 * execute();
+		 * 
+		 */
+
 	}
 
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
-		GDriveWorkspace gdworkspace = new GDriveWorkspace("workspace1", userAuthenticated());
-		String id = DriveQuickstart.getRepoFolder(gdworkspace.getOwner()).getId();
-		DriveQuickstart.driveService().files().delete(id).execute();
-		FSWorkspace w = new FSWorkspace("workspace4", userAuthenticated());
-		w.delete();
-		FSWorkspace w5 = new FSWorkspace("workspace5", userAuthenticated());
-		w5.delete();
-		FSWorkspace w6 = new FSWorkspace("workspace6", userAuthenticated());
-		w6.delete();
+		// una vez terminados los tests borramos todos los workspaces y el fichero
+		// .history
+		deleteGDriveWorkspace(user);
+		// TODO
+		FSFile history = (FSFile) Facade.getFileFromUri("//.history", user);
+		history.delete();
 
-
-		
 	}
 
 	@Before
@@ -72,22 +94,36 @@ public class GDriveTest {
 //GDriveWorkspace#########################################################
 	@Test
 	public void testSaveGDWorkspace() throws AuthenticationException, IOException, GeneralSecurityException {
-		GDriveWorkspace gdworkspace = new GDriveWorkspace("workspace1", userAuthenticated());
+		GDriveWorkspace gdworkspace = new GDriveWorkspace("workspace1", userAuthenticated(),
+				credentials);
 		gdworkspace.persist();
+
 		assertTrue(gdworkspace.exist());
 	}
 
 	@Test
+	public void testSaveSameWorkspace() throws AuthenticationException, GeneralSecurityException, IOException {
+		GDriveWorkspace gdworkspace = new GDriveWorkspace("Same_workspace", userAuthenticated(),
+				credentials);
+		gdworkspace.persist();
+		GDriveWorkspace gdworkspace2 = new GDriveWorkspace("Same_workspace", userAuthenticated(),
+				credentials);
+		boolean res2 = gdworkspace2.persist();
+		assertTrue(gdworkspace.exist());
+		assertTrue(!res2);
+	}
+
+	@Test
 	public void testRepoFolder() throws IOException, GeneralSecurityException {
-		GDriveWorkspace gdworkspace = new GDriveWorkspace("workspace1", userAuthenticated());
+		GDriveWorkspace gdworkspace = new GDriveWorkspace("workspace1", userAuthenticated(), credentials);
 		System.out.println("Test repo folder ====================");
-		System.out.println(DriveQuickstart.getRepoFolder(gdworkspace.getOwner()).toString());
+		System.out.println(DriveQuickstart.getRepoFolder(gdworkspace.getOwner(), credentials).toString());
 		assertTrue(gdworkspace.exist());
 	}
 
 	@Test
 	public void testDelete() {
-		GDriveWorkspace gw = new GDriveWorkspace("workspace2", userAuthenticated());
+		GDriveWorkspace gw = new GDriveWorkspace("workspace2", userAuthenticated(), credentials);
 		System.out.println("Test delete========================");
 		try {
 			gw.persist();
@@ -105,7 +141,7 @@ public class GDriveTest {
 	@Test
 	public void testDeleteFail() {
 		System.out.println("Test delete fail==========================");
-		GDriveWorkspace gw = new GDriveWorkspace("workspace3", userAuthenticated());
+		GDriveWorkspace gw = new GDriveWorkspace("workspace3", user, credentials);
 		try {
 			boolean f = gw.delete();
 			assertTrue(f == false);
@@ -120,24 +156,38 @@ public class GDriveTest {
 	public void testSaveProject() throws AuthenticationException, ObjectClassNotValidException {
 		System.out.println("Test save project ===================================");
 		// 1º Se crea el workspace
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
 		// 2º Crear el proyecto
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
-		boolean save = project.persist();
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
+		project.persist();
 		// Comprobar que existe
 		assertTrue(project.exist());
 		System.out.println(project.getName());
 
 	}
 
+	@Test
+	public void testSaveSameProject() throws AuthenticationException {
+		// 1º Se crea el workspace
+		GDriveWorkspace workspace = new GDriveWorkspace("SWorkspace", user, credentials);
+		workspace.persist();
+		// 2º Crear el proyecto
+		GDriveProject project = new GDriveProject("same_project", workspace.getName(), user, credentials);
+		boolean res = project.persist();
+		GDriveProject project2 = new GDriveProject("same_project", workspace.getName(), user, credentials);
+		boolean res2 = project2.persist();
+		assertTrue(res);
+		assertFalse(res2);
+	}
+
 	// Intentar guardar un proyecto en un workspace que no existe
 	@Test
 	public void testSaveProjectFail() throws AuthenticationException {
 		System.out.println("Test save project fail ==================================");
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace56", userAuthenticated());
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace56", user, credentials);
 		assertTrue(!workspace.exist());
-		GDriveProject project = new GDriveProject("project2", workspace.getName(), userAuthenticated());
+		GDriveProject project = new GDriveProject("project2", workspace.getName(), user, credentials);
 		boolean save = project.persist();
 		assertTrue(save == false);
 
@@ -146,9 +196,9 @@ public class GDriveTest {
 	@Test
 	public void testListProject() throws AuthenticationException {
 		System.out.println("Test list project ===========================================");
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
-		GDriveProject project = new GDriveProject("project1", "workspace4", userAuthenticated());
+		GDriveProject project = new GDriveProject("project1", "workspace4", user, credentials);
 		project.persist();
 		System.out.println(project.list().toString());
 	}
@@ -156,9 +206,9 @@ public class GDriveTest {
 	@Test
 	public void testDeleteProject() throws AuthenticationException {
 		System.out.println("Test delete project ===================================");
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
-		GDriveProject project = new GDriveProject("project1", "workspace4", userAuthenticated());
+		GDriveProject project = new GDriveProject("project1", "workspace4", user, credentials);
 		project.persist();
 
 		boolean delete = project.delete();
@@ -171,7 +221,7 @@ public class GDriveTest {
 	@Test
 	public void testDeleteProjectFail() throws AuthenticationException {
 		System.out.println("Test delete project fail =====================================");
-		GDriveProject project = new GDriveProject("project3", "workspace6", userAuthenticated());
+		GDriveProject project = new GDriveProject("project3", "workspace6", user, credentials);
 
 		boolean delete = project.delete();
 		assertTrue(delete == false);
@@ -181,9 +231,9 @@ public class GDriveTest {
 	@Test
 	public void testDeleteProjectFail2() throws AuthenticationException {
 		System.out.println("Test delete project fail 2 ======================================");
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
-		GDriveProject project = new GDriveProject("project64", "workspace4", userAuthenticated());
+		GDriveProject project = new GDriveProject("project64", "workspace4", user, credentials);
 		project.delete();
 	}
 
@@ -192,14 +242,14 @@ public class GDriveTest {
 	public void testMoveProject() throws AuthenticationException {
 		System.out.println("Test move project ===================================");
 		// 1º Se crea el workspace origen
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
 		// 2º Se crea el workspace destino
-		GDriveWorkspace dest = new GDriveWorkspace("workspace5", userAuthenticated());
+		GDriveWorkspace dest = new GDriveWorkspace("workspace5", user, credentials);
 		dest.persist();
 		// 3º Crear el proyecto
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
-		boolean save = project.persist();
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
+		project.persist();
 		// 4º Mover el proyecto
 		project.move(dest, false);
 
@@ -208,17 +258,51 @@ public class GDriveTest {
 
 	}
 
+	// Mover el proyecto a un workspace que tiene un proyecto con el mismo nombre
+	@Test
+	public void testMoveSameProject() throws AuthenticationException {
+		System.out.println("Test move same project ===================================");
+		// 1º Se crea el workspace origen
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
+		workspace.persist();
+		// 2º Crear el proyecto
+		GDriveProject project = new GDriveProject("same_name", workspace.getName(), user, credentials);
+		project.persist();
+
+		// 3º Se crea el workspace destino
+		GDriveWorkspace dest = new GDriveWorkspace("workspace5", user, credentials);
+		dest.persist();
+		// 4º Se crea un proyecto en el workspace destino
+		GDriveProject projectt = new GDriveProject("same_name", dest.getName(), user, credentials);
+		projectt.persist();
+		// 5º Mover el proyecto
+		boolean move=project.move(dest, false);
+		assertTrue(!move);
+	}
+
 	// Intentar mover un proyecto a un workspace que no existe
 	@Test
 	public void testMoveProjectFail() throws AuthenticationException {
 		System.out.println("Test move project fail ==========================================");
-		GDriveWorkspace w = new GDriveWorkspace("Workspace4", userAuthenticated());
-		GDriveProject project = new GDriveProject("project1", w.getName(), userAuthenticated());
+		GDriveWorkspace w = new GDriveWorkspace("Workspace4", user, credentials);
+		GDriveProject project = new GDriveProject("project1", w.getName(), user, credentials);
 		project.persist();
 
 		boolean move = project.move(w, false);
 		// Comprobar que no se ha podido realizar la operacion
 		assertTrue(!move);
+	}
+
+	@Test
+	public void testSaveFile2() throws AuthenticationException {
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
+		workspace.persist();
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
+		project.persist();
+		GDriveFile file = new GDriveFile("datos.txt", "workspace4", "project1", user, credentials);
+		boolean save = file.persist();
+		assertTrue(save);
+
 	}
 
 	// GDriveFile###############################################################################
@@ -227,24 +311,19 @@ public class GDriveTest {
 
 		System.out.println("Test save file ===================================================");
 		// 1º Se crea el workspace
-		FSWorkspace w = new FSWorkspace("workspace4", userAuthenticated());
-		w.persist();
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
 		// 2º Crear el proyecto
-		FSProject p = new FSProject("project1", workspace.getName(), userAuthenticated());
-		p.persist();
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
 		project.persist();
 
 		// 3º Se crea el fichero
 
-		FSFile fsfile = new FSFile("datos.txt", workspace.getName(), project.getName(), userAuthenticated());
-		fsfile.persist();
 
 		// 4º Se sube el fichero
-		// PARA SUBIR UN FICHERO HACE FALTA QUE EXISTA EN EL REPOSITORIO
-		GDriveFile file = new GDriveFile(fsfile.getName(), workspace.getName(), project.getName(), userAuthenticated());
+		GDriveFile file = new GDriveFile("datos.csv", workspace.getName(), project.getName(), user, credentials);
 		boolean save = file.persist();
 
 		assertTrue(save);
@@ -253,50 +332,44 @@ public class GDriveTest {
 
 	}
 
-	// Guardar un archivo que no este en el repositorio
 	@Test
-	public void testSaveFileFailed() throws AuthenticationException {
-
-		System.out.println("Test save file failed ===================================================");
-
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+	public void testTemporalyFile() throws AuthenticationException, IOException {
+		// Crear workspace
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace_temp", user, credentials);
 		workspace.persist();
-		// 2º Crear el proyecto
 
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+		// Crear proyecto
+		GDriveProject project = new GDriveProject("project_temp", workspace.getName(), user, credentials);
 		project.persist();
 
-		// 3º Se sube el fichero
-		GDriveFile file = new GDriveFile("datos3.txt", workspace.getName(), project.getName(), userAuthenticated());
+		// Crear fichero
+		
+		
+		GDriveFile file = new GDriveFile("fichero_temporal.txt", workspace.getName(), project.getName(), user,
+				credentials);
 		boolean save = file.persist();
-		assertTrue(!save);
-		assertTrue(!file.exist());
+		assertTrue(save);
+	
 
 	}
+
+
 
 	// Eliminar un fichero
 	@Test
 	public void testDeleteFile() throws AuthenticationException {
 		System.out.println("Test delete file ===================================================");
 		// 1º Se crea el workspace
-		FSWorkspace w = new FSWorkspace("workspace4", userAuthenticated());
-		w.persist();
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+		
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
 		// 2º Crear el proyecto
-		FSProject p = new FSProject("project1", workspace.getName(), userAuthenticated());
-		p.persist();
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
 		project.persist();
 
-		// 3º Se crea el fichero
-
-		FSFile fsfile = new FSFile("datos.txt", workspace.getName(), project.getName(), userAuthenticated());
-		fsfile.persist();
-
-		// 4º Se sube el fichero
-		// PARA SUBIR UN FICHERO HACE FALTA QUE EXISTA EN EL REPOSITORIO
-		GDriveFile file = new GDriveFile(fsfile.getName(), workspace.getName(), project.getName(), userAuthenticated());
+		// 3º Se sube el fichero
+		GDriveFile file = new GDriveFile("datos4.csv", workspace.getName(), project.getName(), user, credentials);
 		boolean save = file.persist();
 
 		assertTrue(save);
@@ -314,17 +387,17 @@ public class GDriveTest {
 	@Test
 	public void testDeleteFileFailed() throws AuthenticationException {
 
-		System.out.println("Test save file failed ===================================================");
+		System.out.println("Test delete file failed ===================================================");
 
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
 		// 2º Crear el proyecto
 
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
 		project.persist();
 
 		// 3º Se sube el fichero
-		GDriveFile file = new GDriveFile("datos3.txt", workspace.getName(), project.getName(), userAuthenticated());
+		GDriveFile file = new GDriveFile("datos3.txt", workspace.getName(), project.getName(), user, credentials);
 
 		// Comprobar que no existe
 		assertTrue(!file.exist());
@@ -337,91 +410,82 @@ public class GDriveTest {
 	public void testWriteReadFile() throws AuthenticationException {
 		System.out.println("Test write & read file ===================================================");
 		// 1º Se crea el workspace
-		FSWorkspace w = new FSWorkspace("workspace4", userAuthenticated());
-		w.persist();
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
 		// 2º Crear el proyecto
-		FSProject p = new FSProject("project1", workspace.getName(), userAuthenticated());
-		p.persist();
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
 		project.persist();
 
 		// 3º Se crea el fichero
 
-		FSFile fsfile = new FSFile("datos4.txt", workspace.getName(), project.getName(), userAuthenticated());
-		fsfile.persist();
-
 		// 4º Se sube el fichero
-		// PARA SUBIR UN FICHERO HACE FALTA QUE EXISTA EN EL REPOSITORIO
-		GDriveFile file = new GDriveFile(fsfile.getName(), workspace.getName(), project.getName(), userAuthenticated());
+		GDriveFile file = new GDriveFile("datos4.txt", workspace.getName(), project.getName(), user, credentials);
 		file.persist();
 		// Escribir en el archivo
-		boolean write=file.write("DATOS");
+		boolean write = file.write("DATOS");
 		assertTrue(write);
-		GDriveFile newFile = new GDriveFile(fsfile.getName(), workspace.getName(), project.getName(), userAuthenticated());
-		
+		GDriveFile newFile = new GDriveFile("datos4.txt", workspace.getName(), project.getName(), user, credentials);
+
 		// leer el archivo
 		assertEquals("DATOS", newFile.readAsString());
 	}
-	//Escribir y leer un fichero como un byte
+
+	// Escribir y leer un fichero como un byte
 	@Test
 	public void testWriteReadFileAsByte() throws AuthenticationException {
 		System.out.println("Test write & read file as byte ===================================================");
 		// 1º Se crea el workspace
-		FSWorkspace w = new FSWorkspace("workspace4", userAuthenticated());
-		w.persist();
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
 		// 2º Crear el proyecto
-		FSProject p = new FSProject("project1", workspace.getName(), userAuthenticated());
-		p.persist();
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
 		project.persist();
 
 		// 3º Se crea el fichero
 
-		FSFile fsfile = new FSFile("datos5.txt", workspace.getName(), project.getName(), userAuthenticated());
-		fsfile.persist();
 
 		// 4º Se sube el fichero
-		// PARA SUBIR UN FICHERO HACE FALTA QUE EXISTA EN EL REPOSITORIO
-		GDriveFile file = new GDriveFile(fsfile.getName(), workspace.getName(), project.getName(), userAuthenticated());
+		GDriveFile file = new GDriveFile("datos5.txt", workspace.getName(), project.getName(), user, credentials);
 		file.persist();
 		// Escribir en el archivo
-		boolean write=file.write("DATOS".getBytes());
+		boolean write = file.write("DATOS".getBytes());
 		assertTrue(write);
-		GDriveFile newFile = new GDriveFile(fsfile.getName(), workspace.getName(), project.getName(), userAuthenticated());
-		
+
 		// leer el archivo
-		assertArrayEquals("DATOS".getBytes(), newFile.readAsBytes());
+		assertArrayEquals("DATOS".getBytes(),file.readAsBytes());
 	}
-	//Escribir y leer en un fichero que no exista
+
+	// Escribir y leer en un fichero que no exista
 	@Test
 	public void testWriteReadFileFail() throws AuthenticationException {
 		System.out.println("Test write & read file fail ==========================================");
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
 		project.persist();
-		GDriveFile file = new GDriveFile("datos6.txt", workspace.getName(), project.getName(), userAuthenticated());
+		GDriveFile file = new GDriveFile("datos6.txt", workspace.getName(), project.getName(), user, credentials);
 		assertTrue(!file.exist());
-		boolean write=file.write("DATOS");
+		boolean write = file.write("DATOS");
 		assertTrue(!write);
 		assertNull(file.readAsString());
-		
+
 	}
-	//Escribir como bytes en un fichero que no exista
+
+	// Escribir como bytes en un fichero que no exista
 	@Test
 	public void testWriteFileAsByteFail() throws AuthenticationException {
 		System.out.println("Test write file as byte fail =========================================");
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
 		project.persist();
-		GDriveFile file = new GDriveFile("datos6.txt", workspace.getName(), project.getName(), userAuthenticated());
+		GDriveFile file = new GDriveFile("datos6.txt", workspace.getName(), project.getName(), user, credentials);
 		assertTrue(!file.exist());
-		boolean write=file.write("DATOS".getBytes());
+		boolean write = file.write("DATOS".getBytes());
 		assertTrue(!write);
 	}
 
@@ -433,14 +497,14 @@ public class GDriveTest {
 	public void testSaveDirectory() throws AuthenticationException {
 		System.out.println("Test save directory ==================================================");
 		// 1º Crear el workspace
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
 		// 2º Crear el proyecto
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
 		project.persist();
 		// 3º Crear el directory
-		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(),
-				userAuthenticated());
+		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(), user,
+				credentials);
 		boolean save = directory.persist();
 		assertTrue(directory.exist());
 		assertTrue(save);
@@ -451,16 +515,18 @@ public class GDriveTest {
 	public void testSaveDirectoryFail() throws AuthenticationException {
 		System.out.println("Test save directory fail ===========================================");
 		// 1º Crear el workspace
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
 		// 2º Crear el proyecto
-		GDriveProject project = new GDriveProject("project14", workspace.getName(), userAuthenticated());
+		GDriveProject project = new GDriveProject("project14", workspace.getName(), user, credentials);
+		
 		// 3º Crear el directory
-		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(),
-				userAuthenticated());
+		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(), user,
+				credentials);
 		boolean save = directory.persist();
-		assertTrue(!directory.exist());
 		assertTrue(!save);
+		assertTrue(!directory.exist());
+		
 	}
 
 	// Eliminar una carpeta
@@ -468,14 +534,14 @@ public class GDriveTest {
 	public void testDeleteDirectory() throws AuthenticationException {
 		System.out.println("Test delete directory ==================================================");
 		// 1º Crear el workspace
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
 		// 2º Crear el proyecto
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
 		project.persist();
 		// 3º Crear el directory
-		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(),
-				userAuthenticated());
+		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(), user,
+				credentials);
 		directory.persist();
 		boolean delete = directory.delete();
 		assertTrue(!directory.exist());
@@ -487,14 +553,14 @@ public class GDriveTest {
 	public void testDeleteDirectoryFail() throws AuthenticationException {
 		System.out.println("Test delete directory fail ==================================================");
 		// 1º Crear el workspace
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
 		// 2º Crear el proyecto
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
 		project.persist();
 		// 3º Crear el directory
-		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(),
-				userAuthenticated());
+		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(), user,
+				credentials);
 		boolean delete = directory.delete();
 		assertTrue(!delete);
 	}
@@ -504,17 +570,17 @@ public class GDriveTest {
 	public void testMoveDirectory() throws AuthenticationException {
 		System.out.println("Test move directory ==================================================");
 		// 1º Crear el workspace
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
 		// 2º Crear el proyecto origen
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
 		project.persist();
 		// 3º Crear el proyecto destino
-		GDriveProject dest = new GDriveProject("Proyecto destino", workspace.getName(), userAuthenticated());
+		GDriveProject dest = new GDriveProject("Proyecto destino", workspace.getName(), user, credentials);
 		dest.persist();
 		// 4º Crear la carpeta
-		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(),
-				userAuthenticated());
+		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(), user,
+				credentials);
 		directory.persist();
 		// 5º Mover la carpeta al proyecto destino
 		directory.move(dest, true);
@@ -528,20 +594,20 @@ public class GDriveTest {
 	public void testMoveDirectoryFail() throws AuthenticationException {
 		System.out.println("Test move directory fail==================================================");
 		// 1º Crear el workspace
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
 		// 2º Crear el proyecto origen
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
 		project.persist();
 		// 3º Crear el proyecto destino
-		GDriveProject dest = new GDriveProject("Proyecto destino", workspace.getName(), userAuthenticated());
+		GDriveProject dest = new GDriveProject("Proyecto destino", workspace.getName(), user, credentials);
 		dest.persist();
 		// 4º Crear las carpetas
-		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(),
-				userAuthenticated());
+		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(), user,
+				credentials);
 		directory.persist();
-		GDriveDirectory directory2 = new GDriveDirectory("directory1", workspace.getName(), dest.getName(),
-				userAuthenticated());
+		GDriveDirectory directory2 = new GDriveDirectory("directory1", workspace.getName(), dest.getName(), user,
+				credentials);
 		directory2.persist();
 		// 5º Mover la carpeta al proyecto destino
 		boolean move = directory.move(dest, true);
@@ -557,14 +623,14 @@ public class GDriveTest {
 	public void testMoveDirectoryFail2() throws AuthenticationException {
 		System.out.println("Test move directory fail 2==================================================");
 		// 1º Crear el workspace
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
 		// 2º Crear el proyecto origen
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
 		project.persist();
 		// 3º Crear la carpeta
-		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(),
-				userAuthenticated());
+		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(), user,
+				credentials);
 		directory.persist();
 		// 4º Mover la carpeta al workspace
 		boolean move = directory.move(workspace, true);
@@ -581,23 +647,20 @@ public class GDriveTest {
 	public void testMoveFileToDirectory() throws AuthenticationException {
 		System.out.println("Test move file to directory ==================================================");
 		// 1º Crear el workspace
-		FSWorkspace w = new FSWorkspace("workspace4", userAuthenticated());
-		w.persist();
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", userAuthenticated());
+
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
 		// 2º Crear el proyecto
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
 		project.persist();
-		FSProject p = new FSProject(project.getName(), workspace.getName(), userAuthenticated());
-		p.persist();
+
 		// 3º Crear el directory
-		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(),
-				userAuthenticated());
+		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(), user,
+				credentials);
 		directory.persist();
 		// 4º Crear el archivo
-		FSFile f = new FSFile("file1.txt", workspace.getName(), project.getName(), userAuthenticated());
-		f.persist();
-		GDriveFile file = new GDriveFile("file1.txt", workspace.getName(), project.getName(), userAuthenticated());
+
+		GDriveFile file = new GDriveFile("file1.txt", workspace.getName(), project.getName(), user, credentials);
 		file.persist();
 
 		// Copiar el archivo al directorio directory1
@@ -614,68 +677,58 @@ public class GDriveTest {
 	public void testMoveFileToProject() throws AuthenticationException {
 		System.out.println("Test move file to project ===========================================================");
 		// 1º Crear el workspace
-		FSWorkspace w = new FSWorkspace("workspace5", userAuthenticated());
-		w.persist();
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace5", userAuthenticated());
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace5", user, credentials);
 		workspace.persist();
 		// 2º Crear el proyecto origen
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
 		project.persist();
-		FSProject p = new FSProject(project.getName(), workspace.getName(), userAuthenticated());
-		p.persist();
-		//3º Crear el proyecto destino
-		GDriveProject dest=new GDriveProject("Destino", workspace.getName(), userAuthenticated());
+		// 3º Crear el proyecto destino
+		GDriveProject dest = new GDriveProject("Destino", workspace.getName(), user, credentials);
 		dest.persist();
 		// 4º Crear el directory
-		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(),
-				userAuthenticated());
-		directory.persist();
+
 		// 5º Crear el archivo
-		FSFile f = new FSFile("file1.txt", workspace.getName(), project.getName(), userAuthenticated());
-		f.persist();
-		GDriveFile file = new GDriveFile("file1.txt", workspace.getName(), project.getName(), userAuthenticated());
+
+		GDriveFile file = new GDriveFile("file2.txt", workspace.getName(), project.getName(), user, credentials);
 		file.persist();
-		
-		//Mover el archivo a otro proyecto
-		boolean move=file.move(dest, false);
+
+		// Mover el archivo a otro proyecto
+		boolean move = file.move(dest, false);
 		assertTrue(move);
-		
+		System.out.println(dest.list().toString());
+		System.out.println(project.list().toString());
 		assertTrue(dest.list().toString().contains(file.getName()));
 		assertTrue(!project.list().toString().contains(file.getName()));
 	}
-	
-	//Copiar el archivo a otro workspace
+
+	// Copiar el archivo a otro workspace
 	@Test
 	public void testCopyFileToWorkspace() throws AuthenticationException {
 		System.out.println("Test copy file to workspace ===========================================================");
 		// 1º Crear el workspace origen
-		FSWorkspace w = new FSWorkspace("workspace5", userAuthenticated());
-		w.persist();
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace5", userAuthenticated());
+
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace5", user, credentials);
 		workspace.persist();
 		// 2º Crear el workspace destino
-		GDriveWorkspace dest=new GDriveWorkspace("workspace6", userAuthenticated());
+		GDriveWorkspace dest = new GDriveWorkspace("workspace6", user, credentials);
 		dest.persist();
 		// 3º Crear el proyecto origen
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), userAuthenticated());
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
 		project.persist();
-		FSProject p = new FSProject(project.getName(), workspace.getName(), userAuthenticated());
-		p.persist();
-		
+
+
 		// 4º Crear el directory
-		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(),
-				userAuthenticated());
+		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(), user,
+				credentials);
 		directory.persist();
 		// 5º Crear el archivo
-		FSFile f = new FSFile("file1.txt", workspace.getName(), project.getName(), userAuthenticated());
-		f.persist();
-		GDriveFile file = new GDriveFile("file1.txt", workspace.getName(), project.getName(), userAuthenticated());
+		GDriveFile file = new GDriveFile("file1.txt", workspace.getName(), project.getName(), user, credentials);
 		file.persist();
-		
-		//Mover el archivo al otro workspace
-		boolean move=file.move(dest, true);
+
+		// Mover el archivo al otro workspace
+		boolean move = file.move(dest, true);
 		assertTrue(move);
-		//Comprobar que el archivo esta en el workspace y en el proyecto
+		// Comprobar que el archivo esta en el workspace y en el proyecto
 		assertTrue(dest.list().toString().contains(file.getName()));
 		assertTrue(project.list().toString().contains(file.getName()));
 	}

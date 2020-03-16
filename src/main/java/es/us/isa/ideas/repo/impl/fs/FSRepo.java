@@ -12,11 +12,16 @@ import java.util.ArrayList;
 import java.util.Date;
 import java.util.List;
 
+import javax.lang.model.element.Element;
+
 import org.apache.commons.io.FileUtils;
 
+import es.us.isa.ideas.repo.Directory;
 import es.us.isa.ideas.repo.IdeasRepo;
+import es.us.isa.ideas.repo.Project;
 import es.us.isa.ideas.repo.Repo;
 import es.us.isa.ideas.repo.RepoElement;
+import es.us.isa.ideas.repo.Workspace;
 import es.us.isa.ideas.repo.exception.AuthenticationException;
 import es.us.isa.ideas.repo.operation.Creatable;
 import es.us.isa.ideas.repo.operation.Listable;
@@ -96,6 +101,7 @@ public class FSRepo extends Repo {
 
 	public String getSelectedWorkspace(String owner) throws IOException {
 		String PREF_FILE_NAME = ".history";
+		//TODO Si es un GDriveRepo poner su base uri
 		String prefPath = IdeasRepo.get().getRepoBaseUri() /*
 															 * +
 															 * IdeasRepo.SEPARATOR
@@ -128,6 +134,20 @@ public class FSRepo extends Repo {
 		 */
 
 		return ws;
+	}
+
+	@Override
+	public RepoElement generate(Class<? extends RepoElement> elementClass, String [] params) {
+		RepoElement result=null;
+		if (elementClass.equals(es.us.isa.ideas.repo.File.class) && params.length==4) {
+			result= new FSFile(params[0],params[1],params[2],params[3]);
+		}else if (elementClass.equals(Directory.class) && params.length==4) {
+			result = new FSDirectory(params[0],params[1],params[2],params[3]);
+		}else if(elementClass.equals(Project.class) && params.length==3) {
+			result = new FSProject(params[0],params[1],params[2]) ;
+		}else if(elementClass.equals(Workspace.class))
+			result = new FSWorkspace(params[0], params[1]);
+		return result;
 	}
 
 }

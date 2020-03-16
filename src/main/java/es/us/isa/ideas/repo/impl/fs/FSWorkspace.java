@@ -6,6 +6,8 @@ import java.util.logging.Logger;
 
 import org.apache.commons.io.FileUtils;
 
+import com.google.api.services.drive.Drive;
+
 import es.us.isa.ideas.repo.IdeasRepo;
 import es.us.isa.ideas.repo.Workspace;
 import es.us.isa.ideas.repo.exception.ObjectClassNotValidException;
@@ -55,7 +57,7 @@ public class FSWorkspace extends Workspace {
 		return result;
 	}
 
-	@Override
+	//@Override
 	protected boolean persistImpl() {
 		boolean result = false;
 		try {
@@ -110,5 +112,9 @@ public class FSWorkspace extends Workspace {
 		}
 		return parentNode;
 	}
+
+
+
+
 
 }
