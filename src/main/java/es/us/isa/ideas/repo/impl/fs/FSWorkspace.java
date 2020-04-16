@@ -1,6 +1,7 @@
 package es.us.isa.ideas.repo.impl.fs;
 
 import java.io.File;
+import java.io.IOException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -11,6 +12,7 @@ import com.google.api.services.drive.Drive;
 import es.us.isa.ideas.repo.IdeasRepo;
 import es.us.isa.ideas.repo.Workspace;
 import es.us.isa.ideas.repo.exception.ObjectClassNotValidException;
+import es.us.isa.ideas.repo.gdrive.DriveQuickstart;
 import es.us.isa.ideas.repo.operation.Listable;
 
 public class FSWorkspace extends Workspace {
@@ -112,7 +114,17 @@ public class FSWorkspace extends Workspace {
 		}
 		return parentNode;
 	}
-
+	public boolean uploadWorkspaceToGdrive(Drive credentials) {
+		boolean res=false;
+		try {
+			
+			DriveQuickstart.uploadWorkspace(IdeasRepo.get().getObjectFullUri(this), credentials);
+			res=true;
+		} catch (IOException | ObjectClassNotValidException e) {
+			e.printStackTrace();
+		}
+		return res;
+	}
 
 
 

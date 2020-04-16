@@ -35,7 +35,9 @@ public class GDriveRepo extends Repo {
 			List<File> folders=new ArrayList<>(DriveQuickstart.getFoldersByFolderId(repoFolder.getId(),credentials));
 			List<String> workspaces=new ArrayList<>();
 			for(File f:folders) {
-				String ws="{\"name\": \"" + f.getName() + "\"}";
+			//	String ws="{\"name\": \"" + f.getName() + "\"}";
+				String ws="{\"name\": \"" + f.getName() + "\","+
+			"\"type\":"+"\"Google_Drive"  + "\"}";
 				workspaces.add(ws);
 			}
 			res=workspaces.toString();

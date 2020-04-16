@@ -10,6 +10,8 @@ import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
 
 import es.us.isa.ideas.repo.Workspace;
+import es.us.isa.ideas.repo.exception.AuthenticationException;
+import es.us.isa.ideas.repo.exception.ObjectClassNotValidException;
 import es.us.isa.ideas.repo.impl.fs.FSNode;
 import es.us.isa.ideas.repo.impl.fs.FSNodeIcon;
 import es.us.isa.ideas.repo.operation.Listable;
@@ -113,20 +115,21 @@ public class GDriveWorkspace extends Workspace {
 		res.setTitle(this.getName());
 		res.setFolder(true);
 		res.setIcon(FSNodeIcon.WORKSPACE);
+		res.setKeyPath(this.getName());
 		try {
 			File workspace = DriveQuickstart.getWorkspaceByName(this.getName(), this.getOwner(), this.credentials);
 			if (workspace == null) {
 				LOGGER.log(Level.INFO, "Workspace " + this.getName() + " does not exist.");
 				res = null;
 			} else {
-				res.setChildren(GDriveNode.getChildren(workspace.getId(), credentials));
+				res.setChildren(GDriveNode.getChildren(res.getTitle(),res,workspace.getId(), credentials));
 			}
 		} catch (IOException | GeneralSecurityException e) {
 			e.printStackTrace();
 		}
 		return res;
 	}
-
+	
 	public boolean exist() {
 		boolean res = false;
 		try {
@@ -134,6 +137,20 @@ public class GDriveWorkspace extends Workspace {
 				res = true;
 			}
 		} catch (IOException | GeneralSecurityException e) {
+			e.printStackTrace();
+		}
+		return res;
+	}
+	public boolean downloadWorkspace() {
+		boolean res=false;
+		String id;
+		try {
+			id = DriveQuickstart.getWorkspaceByName(this.getName(), this.getOwner(), this.credentials).getId();
+			DriveQuickstart.downloadWorkspace(this.getName(), this.getOwner(), this, id, credentials);
+			res=true;
+
+		} catch (IOException | GeneralSecurityException | AuthenticationException | ObjectClassNotValidException e) {
+			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
 		return res;

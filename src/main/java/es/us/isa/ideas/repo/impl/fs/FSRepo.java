@@ -71,7 +71,8 @@ public class FSRepo extends Repo {
 		if (wsList != null) {
 			for (String wsName : wsList) {
 				if (!wsName.startsWith(".")) {
-					String ws = "{\"name\": \"" + wsName + "\"}";
+					String ws = "{\"name\": \"" + wsName  + "\","+
+							"\"type\":"+"\"local"  + "\"}";
 					workspaces.add(ws);
 				}
 			}

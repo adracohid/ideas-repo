@@ -495,6 +495,8 @@ public class Facade {
 		return IdeasRepo.get().getRepo("GDRIVE").delete(gdw);
 	}
 	
+
+	
 	public static boolean createGDriveProject(String projectUri, String owner, Drive credentials)
 			throws BadUriException, AuthenticationException {
 		Project fsProject = getGDriveProjectFromUri(projectUri, owner, credentials);
@@ -675,5 +677,8 @@ public class Facade {
 		com.google.api.services.drive.model.File gf=DriveQuickstart.getDirectoryByName(f.getName(), f.getProject(), f.getWorkspace(), owner, credentials);
 		return DriveQuickstart.renameFile(gf.getId(), newName, credentials);
 	
+	}
+	public static boolean downloadGDriveWorkspace(GDriveWorkspace gdworkspace) {
+		return gdworkspace.downloadWorkspace();
 	}
 }

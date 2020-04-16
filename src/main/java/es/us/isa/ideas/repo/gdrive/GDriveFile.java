@@ -87,7 +87,7 @@ public class GDriveFile extends File {
 
 			} else {
 
-				System.out.println(IdeasRepo.get().getObjectFullUri(dest));
+				//System.out.println(IdeasRepo.get().getObjectFullUri(dest));
 				String[] s1 = IdeasRepo.get().getObjectFullUri(dest).split("//");
 				String[] s2 = s1[1].split("/");
 				com.google.api.services.drive.model.File folder = null;
