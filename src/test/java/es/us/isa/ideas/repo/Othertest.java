@@ -170,15 +170,13 @@ public class Othertest {
 		// 1.2 creamos un fichero
 		FSFile pfile = new FSFile("pfile.txt", "wlocal", "plocal", user);
 		pfile.persist();
-		
-		//2º Creamos el workspace en google drive
-		GDriveWorkspace wgdrive=new GDriveWorkspace("wgdrive",user,credentials);
+
+		// 2º Creamos el workspace en google drive
+		GDriveWorkspace wgdrive = new GDriveWorkspace("wgdrive", user, credentials);
 		wgdrive.persist();
-		
-		//2.1 Creamos el/los proyecto/s
-		
-		
-		
+
+		// 2.1 Creamos el/los proyecto/s
+
 	}
 
 	@Test
@@ -189,86 +187,88 @@ public class Othertest {
 		// 1.1 creamos un proyecto
 		FSProject plocal = new FSProject("plocal", wlocal.getName(), user);
 		plocal.persist();
-		
+
 		// 1.2 creamos un fichero
 		FSFile pfile = new FSFile("pfile.txt", wlocal.getName(), "plocal", user);
 		pfile.persist();
-		//1.3 Creamos un directory
-		FSDirectory dlocal=new FSDirectory("dlocal",wlocal.getName(),plocal.getName(),user);
+		// 1.3 Creamos un directory
+		FSDirectory dlocal = new FSDirectory("dlocal", wlocal.getName(), plocal.getName(), user);
 		dlocal.persist();
 
-		//1.4 Creamos otro fichero
-		FSFile file2=new FSFile("file2",wlocal.getName(),plocal.getName(),user);
+		// 1.4 Creamos otro fichero
+		FSFile file2 = new FSFile("file2", wlocal.getName(), plocal.getName(), user);
 		file2.persist();
-		//1.5 Movemos ese fichero al directory dlocal
+		// 1.5 Movemos ese fichero al directory dlocal
 		file2.move(dlocal, false);
-		
-		for(Node projects:wlocal.list().getChildren()) {
-			for(Node f:projects.getChildren()) {
+
+		for (Node projects : wlocal.list().getChildren()) {
+			for (Node f : projects.getChildren()) {
 				System.out.println(f.getTitle());
-			
+
 			}
 		}
 
 	}
+
 	@Test
-	public void testDownload() throws IOException, GeneralSecurityException, AuthenticationException, ObjectClassNotValidException, BadUriException {
+	public void testDownload() throws IOException, GeneralSecurityException, AuthenticationException,
+			ObjectClassNotValidException, BadUriException {
 		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
 		workspace.persist();
 		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
 		project.persist();
-		GDriveProject project2=new GDriveProject("project2",workspace.getName(),user,credentials);
+		GDriveProject project2 = new GDriveProject("project2", workspace.getName(), user, credentials);
 		project2.persist();
-		GDriveDirectory directory=new GDriveDirectory("directoryp1", workspace.getName(), project.getName(), user,credentials);
+		GDriveDirectory directory = new GDriveDirectory("directoryp1", workspace.getName(), project.getName(), user,
+				credentials);
 		directory.persist();
 
-		
 		GDriveFile file = new GDriveFile("datos.txt", "workspace4", "project1", user, credentials);
 		file.persist();
 		file.write("Hello world!");
-		GDriveFile filep1=new GDriveFile("datosp1.txt",workspace.getName(),project.getName(),user,credentials);
+		GDriveFile filep1 = new GDriveFile("datosp1.txt", workspace.getName(), project.getName(), user, credentials);
 		filep1.persist();
-		GDriveFile filep2=new GDriveFile("datosp2.txt",workspace.getName(),project2.getName(),user,credentials);
+		GDriveFile filep2 = new GDriveFile("datosp2.txt", workspace.getName(), project2.getName(), user, credentials);
 		filep2.persist();
-		
+
 		file.move(directory, false);
 		
-		System.out.println("workspace path: "+workspace.list().toString());
-		System.out.println("project path: "+project.list().toString());
-		System.out.println("directory path: "+directory.list().toString());
+		boolean download=workspace.downloadWorkspace();
+		assertTrue(download);
+		//Comprobamos que existe en local
+		FSWorkspace w=new FSWorkspace(workspace.getName(),user);
 		
-		
-		//FSWorkspace local=new FSWorkspace(gdw.getName(),user);
-		
-	//	DriveQuickstart.downloadWorkspace(gdw.getName(),user,local,gdw.getId(), credentials);
-		
+		File ws = new File(IdeasRepo.get().getObjectFullUri(w));
+
+		assertTrue(ws.exists());
+
 	}
-	
+
 	@Test
-	public void testUpload() throws AuthenticationException, BadUriException, IOException, GeneralSecurityException, ObjectClassNotValidException {
+	public void testUpload() throws AuthenticationException, BadUriException, IOException, GeneralSecurityException,
+			ObjectClassNotValidException {
 		Facade.createWorkspace("wfile", user);
-		
+
 		Facade.createProject("wfile/proyect1", user);
 		Facade.createProject("wfile/proyect2", user);
 		Facade.createDirectory("wfile/proyect1/directp1", user);
-		FSFile fdirectory=new FSFile("directp1/datos2.txt","wfile","proyect1",user);
+		FSFile fdirectory = new FSFile("directp1/datos2.txt", "wfile", "proyect1", user);
 		fdirectory.persist();
 
 		Facade.createFile("wfile/proyect1/documento.csv", user);
 		Facade.setFileContent("wfile/proyect1/documento.csv", user, "Hola, mundo");
 		Facade.createFile("wfile/proyect1/datos1.csv", user);
-		//Facade.createFile("wfile/proyect1/directp1/datos2.txt", user);
+		// Facade.createFile("wfile/proyect1/directp1/datos2.txt", user);
 
-		fdirectory.write("equisdeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeeh");
+		fdirectory.write("dato1, dato2");
 
-		FSWorkspace wlocal=new FSWorkspace("wfile",user);
-		DriveQuickstart.uploadWorkspace(wlocal.getName(), user,credentials);
-
-		String[] n=fdirectory.getName().split("/");
-		System.out.println("name: "+n[n.length-1]);
-		
-
-		
+		FSWorkspace wlocal = new FSWorkspace("wfile", user);
+		// DriveQuickstart.uploadWorkspace(wlocal.getName(), user,credentials);
+		boolean upload=wlocal.uploadWorkspaceToGdrive(credentials);
+		assertTrue(upload);
+		//Comprobamos que existe el workspace en google drive
+		GDriveWorkspace gw=new GDriveWorkspace(wlocal.getName(), user, credentials);
+		assertTrue(gw.exist());
 	}
 
 }

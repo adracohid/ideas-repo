@@ -143,14 +143,15 @@ public class GDriveProject extends Project {
 		res.setTitle(this.getName());
 		res.setFolder(true);
 		res.setIcon(FSNodeIcon.PROJECT);
-		res.setKeyPath(this.getName());
+		String path=this.getWorkspace()+"/"+this.getName();
+		res.setKeyPath(path);
 		try {
 			File project=DriveQuickstart.getProjectByName(this.getName(), this.getWorkspace(), this.getOwner(),this.credentials);
 			if(project==null) {
 				LOGGER.log(Level.INFO,  "Project "+this.getName()+" does not exist.");
 				res=null;
 			}else {
-			res.setChildren(GDriveNode.getChildren(res.getTitle(),res,project.getId(),credentials));
+			res.setChildren(GDriveNode.getChildren(res.getKeyPath(),res,project.getId(),credentials));
 			
 			}
 			

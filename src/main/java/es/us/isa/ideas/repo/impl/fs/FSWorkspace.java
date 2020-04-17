@@ -2,6 +2,7 @@ package es.us.isa.ideas.repo.impl.fs;
 
 import java.io.File;
 import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -11,6 +12,8 @@ import com.google.api.services.drive.Drive;
 
 import es.us.isa.ideas.repo.IdeasRepo;
 import es.us.isa.ideas.repo.Workspace;
+import es.us.isa.ideas.repo.exception.AuthenticationException;
+import es.us.isa.ideas.repo.exception.BadUriException;
 import es.us.isa.ideas.repo.exception.ObjectClassNotValidException;
 import es.us.isa.ideas.repo.gdrive.DriveQuickstart;
 import es.us.isa.ideas.repo.operation.Listable;
@@ -118,9 +121,9 @@ public class FSWorkspace extends Workspace {
 		boolean res=false;
 		try {
 			
-			DriveQuickstart.uploadWorkspace(IdeasRepo.get().getObjectFullUri(this), credentials);
+			DriveQuickstart.uploadWorkspace(this.getName(),this.getOwner(), credentials);
 			res=true;
-		} catch (IOException | ObjectClassNotValidException e) {
+		} catch (IOException | ObjectClassNotValidException | AuthenticationException | GeneralSecurityException | BadUriException e) {
 			e.printStackTrace();
 		}
 		return res;

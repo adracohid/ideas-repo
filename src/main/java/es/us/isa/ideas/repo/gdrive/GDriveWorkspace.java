@@ -11,6 +11,7 @@ import com.google.api.services.drive.model.File;
 
 import es.us.isa.ideas.repo.Workspace;
 import es.us.isa.ideas.repo.exception.AuthenticationException;
+import es.us.isa.ideas.repo.exception.BadUriException;
 import es.us.isa.ideas.repo.exception.ObjectClassNotValidException;
 import es.us.isa.ideas.repo.impl.fs.FSNode;
 import es.us.isa.ideas.repo.impl.fs.FSNodeIcon;
@@ -143,13 +144,11 @@ public class GDriveWorkspace extends Workspace {
 	}
 	public boolean downloadWorkspace() {
 		boolean res=false;
-		String id;
 		try {
-			id = DriveQuickstart.getWorkspaceByName(this.getName(), this.getOwner(), this.credentials).getId();
-			DriveQuickstart.downloadWorkspace(this.getName(), this.getOwner(), this, id, credentials);
+			DriveQuickstart.downloadWorkspace(this.getName(), this.getOwner(),this.credentials);
 			res=true;
 
-		} catch (IOException | GeneralSecurityException | AuthenticationException | ObjectClassNotValidException e) {
+		} catch (IOException | GeneralSecurityException | AuthenticationException | ObjectClassNotValidException | BadUriException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}

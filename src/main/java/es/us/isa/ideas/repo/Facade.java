@@ -666,7 +666,7 @@ public class Facade {
 	public static boolean renameGDriveFile(String fileUri, String owner,
 			String newName, Drive credentials) throws IOException, GeneralSecurityException, BadUriException {
 		GDriveFile f=getGDriveFileFromUri(fileUri, owner, credentials);
-		com.google.api.services.drive.model.File gf=DriveQuickstart.getFileByName(f.getName(), f.getProject(), f.getWorkspace(), owner, credentials);
+		com.google.api.services.drive.model.File gf=DriveQuickstart.getFileByName(f.getName(),null, f.getProject(), f.getWorkspace(), owner, credentials);
 		return DriveQuickstart.renameFile(gf.getId(), newName, credentials);
 	
 	}

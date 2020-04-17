@@ -19,6 +19,7 @@ import es.us.isa.ideas.repo.operation.Listable;
 public class GDriveFile extends File {
 	private static final Logger LOGGER = Logger.getLogger(GDriveFile.class.getName());
 	private Drive credentials;
+	
 
 	public GDriveFile(String name, String workspace, String project, String owner, Drive credentials) {
 		super(name, workspace, project, owner);
@@ -37,7 +38,7 @@ public class GDriveFile extends File {
 	public boolean write(byte[] content) throws AuthenticationException {
 		boolean res = false;
 		try {
-			com.google.api.services.drive.model.File file = DriveQuickstart.getFileByName(this.getName(),
+			com.google.api.services.drive.model.File file = DriveQuickstart.getFileByName(this.getName(),null,
 					this.getProject(), this.getWorkspace(), this.getOwner(), this.credentials);
 			if (file == null) {
 				LOGGER.log(Level.INFO, "File " + this.getName() + " does not exist.");
@@ -57,7 +58,7 @@ public class GDriveFile extends File {
 	protected boolean writeImpl(String content) {
 		boolean res = false;
 		try {
-			com.google.api.services.drive.model.File file = DriveQuickstart.getFileByName(this.getName(),
+			com.google.api.services.drive.model.File file = DriveQuickstart.getFileByName(this.getName(),null,
 					this.getProject(), this.getWorkspace(), this.getOwner(), this.credentials);
 			if (file == null) {
 
@@ -80,37 +81,40 @@ public class GDriveFile extends File {
 	protected boolean moveImpl(Listable dest, boolean copy) {
 		boolean res = false;
 		try {
-			com.google.api.services.drive.model.File file = DriveQuickstart.getFileByName(this.getName(),
+			com.google.api.services.drive.model.File file = DriveQuickstart.getFileByName(this.getName(),null,
 					this.getProject(), this.getWorkspace(), this.getOwner(), this.credentials);
 			if (file == null) {
 				LOGGER.log(Level.INFO, "File " + this.getName() + " does not exist.");
 
 			} else {
-
+				String directoryName=null;
 				//System.out.println(IdeasRepo.get().getObjectFullUri(dest));
 				String[] s1 = IdeasRepo.get().getObjectFullUri(dest).split("//");
 				String[] s2 = s1[1].split("/");
+				com.google.api.services.drive.model.File fileInFolder=null;
 				com.google.api.services.drive.model.File folder = null;
 				if (dest instanceof GDriveProject) {
 					folder = DriveQuickstart.getProjectByName(s2[s2.length - 1], s2[s2.length - 2], s2[s2.length - 3],
 							this.credentials);
-				} else if (dest instanceof GDriveWorkspace) {
-					folder = DriveQuickstart.getWorkspaceByName(s2[s2.length - 1], s2[s2.length - 2], this.credentials);
+					 fileInFolder= DriveQuickstart.getFileByName(
+							this.getName(),null, folder.getName(), this.getWorkspace(), this.getOwner(),
+							this.getCredentials());
 				} else if (dest instanceof GDriveDirectory) {
-					System.out.println(s2[s2.length - 1] + s2[s2.length - 2] + s2[s2.length - 3] + s2[s2.length - 4]);
 					folder = DriveQuickstart.getDirectoryByName(s2[s2.length - 1], s2[s2.length - 2], s2[s2.length - 3],
 							s2[s2.length - 4], this.credentials);
+					directoryName=s2[s2.length - 1];
+					fileInFolder= DriveQuickstart.getFileByName(
+							this.getName(),directoryName, this.getProject(), this.getWorkspace(), this.getOwner(),
+							this.getCredentials());
 				}else {
-					LOGGER.log(Level.INFO, "The target folder must be a workspace, project or directory");
+					LOGGER.log(Level.INFO, "The target folder must be a project or directory");
 				}
 				if (folder == null) {
 					LOGGER.log(Level.INFO, "Folder " + dest.getClass().getName() + " does not exist.");
 
 				} else {
 					// Comprobamos si el fichero existe dentro del folder
-					com.google.api.services.drive.model.File fileInFolder = DriveQuickstart.getFileByName(
-							this.getName(), folder.getName(), this.getWorkspace(), this.getOwner(),
-							this.getCredentials());
+					
 					if (fileInFolder == null) {
 						if (copy) {
 							DriveQuickstart.copyFileToFolder(file.getId(), folder.getId(), credentials);
@@ -137,7 +141,7 @@ public class GDriveFile extends File {
 		boolean res = false;
 		// Obtenemos el fichero
 		try {
-			com.google.api.services.drive.model.File file = DriveQuickstart.getFileByName(this.getName(),
+			com.google.api.services.drive.model.File file = DriveQuickstart.getFileByName(this.getName(),null,
 					this.getProject(), this.getWorkspace(), this.getOwner(), this.credentials);
 			if (file == null) {
 				LOGGER.log(Level.INFO, "File " + this.getName() + " does not exist.");
@@ -175,7 +179,7 @@ public class GDriveFile extends File {
 
 				} else {
 					// Comprobamos que no exista un fichero con el mismo nombre
-					com.google.api.services.drive.model.File file = DriveQuickstart.getFileByName(this.getName(),
+					com.google.api.services.drive.model.File file = DriveQuickstart.getFileByName(this.getName(),null,
 							this.getProject(), this.getWorkspace(), this.getOwner(), this.getCredentials());
 					if (file != null) {
 						LOGGER.log(Level.INFO, "File " + this.getName() + " already exist");
@@ -228,7 +232,7 @@ public class GDriveFile extends File {
 		String res = "";
 		try {
 
-			com.google.api.services.drive.model.File file = DriveQuickstart.getFileByName(this.getName(),
+			com.google.api.services.drive.model.File file = DriveQuickstart.getFileByName(this.getName(),null,
 					this.getProject(), this.getWorkspace(), this.getOwner(), this.credentials);
 			if (file == null) {
 				LOGGER.log(Level.INFO, "File " + this.getName() + " does not exist.");
@@ -253,7 +257,7 @@ public class GDriveFile extends File {
 	public boolean exist() {
 		boolean res = false;
 		try {
-			if (DriveQuickstart.getFileByName(this.getName(), this.getProject(), this.getWorkspace(), this.getOwner(),
+			if (DriveQuickstart.getFileByName(this.getName(), null,this.getProject(), this.getWorkspace(), this.getOwner(),
 					this.credentials) != null) {
 				res = true;
 			}

@@ -161,6 +161,7 @@ public class FacadeTest {
 		// repositorio
 		FSRepo repo=new FSRepo();
 		assertTrue(repo.getWorkspaces(user).contains(ws));
+		
 	}
 	@Test
 	public void testGetSelectedGDriveWorkspace() throws IOException, AuthenticationException {

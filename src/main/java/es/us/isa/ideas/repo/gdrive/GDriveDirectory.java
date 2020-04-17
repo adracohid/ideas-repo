@@ -163,7 +163,8 @@ public class GDriveDirectory extends Directory {
 		res.setTitle(this.getName());
 		res.setFolder(true);
 		res.setIcon(FSNodeIcon.FOLDER);
-		res.setKeyPath(this.getName());
+		String path=this.getWorkspace()+"/"+this.getProject()+"/"+this.getName();
+		res.setKeyPath(path);
 		try {
 			File folder = DriveQuickstart.getDirectoryByName(this.getName(), this.getProject(), this.getWorkspace(),
 					this.getOwner(), this.credentials);
@@ -172,7 +173,7 @@ public class GDriveDirectory extends Directory {
 				res = null;
 
 			} else {
-				res.setChildren(GDriveNode.getChildren(res.getTitle(),res,folder.getId(), credentials));
+				res.setChildren(GDriveNode.getChildren(res.getKeyPath(),res,folder.getId(), credentials));
 
 			}
 		} catch (IOException | GeneralSecurityException e) {

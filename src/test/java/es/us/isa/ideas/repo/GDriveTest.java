@@ -26,6 +26,7 @@ import es.us.isa.ideas.repo.gdrive.GDriveProject;
 import es.us.isa.ideas.repo.gdrive.GDriveWorkspace;
 import es.us.isa.ideas.repo.impl.fs.FSFile;
 import es.us.isa.ideas.repo.impl.fs.FSRepo;
+import es.us.isa.ideas.repo.impl.fs.FSWorkspace;
 
 public class GDriveTest {
 	private static String user;
@@ -701,7 +702,7 @@ public class GDriveTest {
 		assertTrue(!project.list().toString().contains(file.getName()));
 	}
 
-	// Copiar el archivo a otro workspace
+	// Intentar copiar el archivo a otro workspace
 	@Test
 	public void testCopyFileToWorkspace() throws AuthenticationException {
 		System.out.println("Test copy file to workspace ===========================================================");
@@ -727,10 +728,70 @@ public class GDriveTest {
 
 		// Mover el archivo al otro workspace
 		boolean move = file.move(dest, true);
-		assertTrue(move);
-		// Comprobar que el archivo esta en el workspace y en el proyecto
-		assertTrue(dest.list().toString().contains(file.getName()));
-		assertTrue(project.list().toString().contains(file.getName()));
+		assertFalse(move);
+
+	}
+	
+	//Download y upload ######################################################################
+	@Test
+	public void testDownload() throws IOException, GeneralSecurityException, AuthenticationException,
+			ObjectClassNotValidException, BadUriException {
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
+		workspace.persist();
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
+		project.persist();
+		GDriveProject project2 = new GDriveProject("project2", workspace.getName(), user, credentials);
+		project2.persist();
+		GDriveDirectory directory = new GDriveDirectory("directoryp1", workspace.getName(), project.getName(), user,
+				credentials);
+		directory.persist();
+
+		GDriveFile file = new GDriveFile("datos.txt", "workspace4", "project1", user, credentials);
+		file.persist();
+		file.write("Hello world!");
+		GDriveFile filep1 = new GDriveFile("datosp1.txt", workspace.getName(), project.getName(), user, credentials);
+		filep1.persist();
+		GDriveFile filep2 = new GDriveFile("datosp2.txt", workspace.getName(), project2.getName(), user, credentials);
+		filep2.persist();
+
+		file.move(directory, false);
+		
+		boolean download=workspace.downloadWorkspace();
+		assertTrue(download);
+		//Comprobamos que existe en local
+		FSWorkspace w=new FSWorkspace(workspace.getName(),user);
+		
+		java.io.File ws = new java.io.File(IdeasRepo.get().getObjectFullUri(w));
+
+		assertTrue(ws.exists());
+
+	}
+
+	@Test
+	public void testUpload() throws AuthenticationException, BadUriException, IOException, GeneralSecurityException,
+			ObjectClassNotValidException {
+		Facade.createWorkspace("wfile", user);
+
+		Facade.createProject("wfile/proyect1", user);
+		Facade.createProject("wfile/proyect2", user);
+		Facade.createDirectory("wfile/proyect1/directp1", user);
+		FSFile fdirectory = new FSFile("directp1/datos2.txt", "wfile", "proyect1", user);
+		fdirectory.persist();
+
+		Facade.createFile("wfile/proyect1/documento.csv", user);
+		Facade.setFileContent("wfile/proyect1/documento.csv", user, "Hola, mundo");
+		Facade.createFile("wfile/proyect1/datos1.csv", user);
+		// Facade.createFile("wfile/proyect1/directp1/datos2.txt", user);
+
+		fdirectory.write("dato1, dato2");
+
+		FSWorkspace wlocal = new FSWorkspace("wfile", user);
+		// DriveQuickstart.uploadWorkspace(wlocal.getName(), user,credentials);
+		boolean upload=wlocal.uploadWorkspaceToGdrive(credentials);
+		assertTrue(upload);
+		//Comprobamos que existe el workspace en google drive
+		GDriveWorkspace gw=new GDriveWorkspace(wlocal.getName(), user, credentials);
+		assertTrue(gw.exist());
 	}
 
 }

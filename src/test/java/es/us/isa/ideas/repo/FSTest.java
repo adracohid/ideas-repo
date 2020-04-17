@@ -170,6 +170,7 @@ public class FSTest {
 	@Test
 	public void testSaveProject() throws AuthenticationException, ObjectClassNotValidException {
 		FSWorkspace w1 = new FSWorkspace("workspace1", userAuthenticated());
+		w1.persist();
 		FSProject project = new FSProject("proyecto1", "workspace1", userAuthenticated());
 		project.persist();
 		System.out.println("\nTest Save Project===================================");
