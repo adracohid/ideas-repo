@@ -11,6 +11,7 @@ import java.util.Map;
 import org.apache.commons.io.FileUtils;
 
 import es.us.isa.ideas.repo.IdeasRepo;
+import es.us.isa.ideas.repo.Node;
 
 public class FSNodeBuilder {
 
@@ -29,6 +30,7 @@ public class FSNodeBuilder {
 			parentNode.setTitle(parentDir.getName());
 			parentNode.setFolder(true);
 			parentNode.setIcon(FSNodeIcon.WORKSPACE);
+			parentNode.setType(Node.LOCAL);
 
 		}
 		try {
@@ -40,6 +42,7 @@ public class FSNodeBuilder {
 					FSNode subDirNode = new FSNode();
 					subDirNode.setFolder(true);
 					subDirNode.setTitle(s.getName());
+					subDirNode.setType(Node.LOCAL);
 					subDirNode.setKeyPath(constructFileKeyPath(s, path));
 					parentNode.getChildren().add(subDirNode);
 					if (parentNode.getIcon().equals(FSNodeIcon.WORKSPACE)) {
@@ -59,6 +62,7 @@ public class FSNodeBuilder {
 					}
 					subNode.setTitle(s.getName());
 					subNode.setFolder(false);
+					subNode.setType(Node.LOCAL);
 					subNode.setKeyPath(constructFileKeyPath(s, path));
 					parentNode.getChildren().add(subNode);
 				} else {

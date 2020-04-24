@@ -133,6 +133,7 @@ public class Facade {
 		FSWorkspace ws = new FSWorkspace(wsName, owner);
 		Node wsNode = IdeasRepo.get().getRepo().list(ws);
 		String resp = "[";
+		
 		for (int i = 0; i < wsNode.getChildren().size(); i++) {
 			if (i != 0) {
 				resp += ",";
@@ -140,7 +141,9 @@ public class Facade {
 			FSNode fsChild = (FSNode) wsNode.getChildren().get(i);
 			resp += fsChild.toString();
 		}
+		
 		resp += "]";
+		
 		return resp;
 	}
 
@@ -583,6 +586,7 @@ public class Facade {
 		Node wsNode=IdeasRepo.get().getRepo("GDRIVE").list(w);
 		
 		String resp = "[";
+		
 		for (int i = 0; i < wsNode.getChildren().size(); i++) {
 			if (i != 0) {
 				resp += ",";
@@ -678,7 +682,19 @@ public class Facade {
 		return DriveQuickstart.renameFile(gf.getId(), newName, credentials);
 	
 	}
-	public static boolean downloadGDriveWorkspace(GDriveWorkspace gdworkspace) {
+	public static boolean renameGDriveProject(String fileUri, String owner, String newName, Drive credentials) throws BadUriException, IOException, GeneralSecurityException {
+		GDriveProject p=getGDriveProjectFromUri(fileUri, owner, credentials);
+		com.google.api.services.drive.model.File gp=DriveQuickstart.getProjectByName(p.getName(), p.getWorkspace(), owner, credentials);
+		return DriveQuickstart.renameFile(gp.getId(), newName, credentials);
+	}
+	public static boolean downloadGDriveWorkspace(String workspaceName,String owner, Drive credentials) {
+		GDriveWorkspace gdworkspace=new GDriveWorkspace(workspaceName,owner,credentials);
 		return gdworkspace.downloadWorkspace();
+	}
+	
+	
+	public static boolean uploadWorkspace(String workspaceName, String owner, Drive credentials) {
+		FSWorkspace w=new FSWorkspace(workspaceName,owner);
+		return w.uploadWorkspaceToGdrive(credentials);
 	}
 }

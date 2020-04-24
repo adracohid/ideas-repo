@@ -45,6 +45,7 @@ public class FSNode extends Node {
 		s+= "\"icon\":" + getIcon() + ",";
 		s+= "\"isFolder\":" + isFolder() + ",";
 		s+= "\"keyPath\":\"" + getKeyPath() + "\",";
+		s+= "\"type\":\"" +getType() + "\",";
 		s+= "\"children\": [";
 		
 			for ( int i = 0; i < getChildren().size() ; i++ ) {

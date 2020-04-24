@@ -9,6 +9,7 @@ import java.util.logging.Logger;
 import com.google.api.services.drive.Drive;
 import com.google.api.services.drive.model.File;
 
+import es.us.isa.ideas.repo.Node;
 import es.us.isa.ideas.repo.Workspace;
 import es.us.isa.ideas.repo.exception.AuthenticationException;
 import es.us.isa.ideas.repo.exception.BadUriException;
@@ -117,6 +118,7 @@ public class GDriveWorkspace extends Workspace {
 		res.setFolder(true);
 		res.setIcon(FSNodeIcon.WORKSPACE);
 		res.setKeyPath(this.getName());
+		res.setType(Node.GOOGLE_DRIVE);
 		try {
 			File workspace = DriveQuickstart.getWorkspaceByName(this.getName(), this.getOwner(), this.credentials);
 			if (workspace == null) {

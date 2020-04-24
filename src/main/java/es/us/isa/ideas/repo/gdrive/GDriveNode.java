@@ -33,6 +33,7 @@ public class GDriveNode extends Node{
 		String s="{";
 		s+="\"icon\":"+getIcon()+",";
 		s+="\"isFolder\":"+isFolder()+",";
+		
 		s+= "\"children\": [";
 		
 		for ( int i = 0; i < getChildren().size() ; i++ ) {
@@ -57,6 +58,7 @@ public class GDriveNode extends Node{
 			child.setTitle(f.getName());
 			String newPath=path+"/"+child.getTitle();
 			child.setKeyPath(newPath);
+			child.setType(Node.GOOGLE_DRIVE);
 			result.add(child);
 			
 			if(f.getMimeType().equals("application/vnd.google-apps.folder")) {

@@ -6,6 +6,9 @@ import java.util.List;
 
 public abstract class Node {
 
+	public static String LOCAL="local";
+	public static String GOOGLE_DRIVE="Google_Drive";
+	private String type;
 	private boolean isFolder;
 	
 	private String title;
@@ -17,6 +20,14 @@ public abstract class Node {
 			children = new ArrayList<Node>();
 		}
 		return children;
+	}
+
+	public String getType() {
+		return type;
+	}
+
+	public void setType(String type) {
+		this.type = type;
 	}
 
 	public void setChildren(List<Node> nodeList) {

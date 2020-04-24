@@ -196,9 +196,9 @@ public class DriveQuickstart {
 		// Hay que comprobar que el fichero existe
 		File f = credentials.files().get(id).setFields("name, parents").execute();
 		String res = "";
-		res = download(id, credentials) + msg;
+		//res = download(id, credentials) + msg;
 		// TODO
-		// res=msg;
+		 res=msg;
 		// 3º Creamos el buffer de escritura
 		ByteArrayInputStream bais = new ByteArrayInputStream(res.getBytes());
 		InputStreamContent content = new InputStreamContent("text/plain", bais);
