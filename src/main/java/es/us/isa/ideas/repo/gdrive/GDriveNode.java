@@ -56,7 +56,13 @@ public class GDriveNode extends Node{
 		for(File f:files) {			
 			FSNode child=new FSNode();
 			child.setTitle(f.getName());
-			String newPath=path+"/"+child.getTitle();
+			String newPath=null;
+			if(path.equals("")) {
+			newPath=child.getTitle();
+			}else {
+			newPath=path+"/"+child.getTitle();	
+			}
+			
 			child.setKeyPath(newPath);
 			child.setType(Node.GOOGLE_DRIVE);
 			result.add(child);

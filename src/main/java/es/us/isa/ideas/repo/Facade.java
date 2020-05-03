@@ -527,13 +527,23 @@ public class Facade {
 	}
 	public static GDriveFile getGDriveFileFromUri(String path, String owner, Drive credentials) throws BadUriException {
 		GDriveFile res=null;
-		String[] split=path.split("/");
-		 if(split.length<3) {
+		String[] splitURI=path.split("/");
+		 if(splitURI.length<3) {
 			 throw new BadUriException(
 						"Bad uri, it should contains at 1 separator.");
-		 }else {
-			 res=new GDriveFile(split[2],split[0],split[1],owner, credentials);
 		 }
+		 String workspace=splitURI[0];
+		 String project=splitURI[1];
+		 String name="";
+		 for(int i=2;i<splitURI.length;i++) {
+			 name+=splitURI[i];
+			 if(i<splitURI.length-1) {
+				 name+=SEPARATOR;
+			 }
+		 }
+		 System.out.println("name file: "+name);
+			 res=new GDriveFile(name,workspace,project,owner, credentials);
+		 
 		 return res;
 	}
 	//TODO
@@ -545,12 +555,23 @@ public class Facade {
 
 	private static GDriveDirectory getGDriveDirectoryFromUri(String dirUri, String owner, Drive credentials) throws BadUriException {
 		GDriveDirectory res=null;
-		String[] split=dirUri.split("/");
+		String[] split=splitURI(dirUri);
 		 if(split.length<3) {
 			 throw new BadUriException(
 						"Bad uri, it should contains at 1 separator.");
 		 }else {
-			 res=new GDriveDirectory(split[2],split[0],split[1],owner, credentials);
+			 String workspace=split[0];
+			 String project=split[1];
+			 String directory="";
+			 if(split.length>2) {
+				 for(int i=2;i<split.length;i++) {
+					 directory+=split[i];
+					 if(i<split.length-1) {
+						 directory+=SEPARATOR;
+					 }
+				 }
+			 }
+			 res=new GDriveDirectory(directory,workspace,project,owner, credentials);
 		 }
 		return res;
 	}

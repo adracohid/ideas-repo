@@ -589,37 +589,8 @@ public class GDriveTest {
 		// Comprobamos que el directorio existe dentro del proyecto dest
 		assertTrue(dest.list().toString().contains(directory.getName()));
 	}
-
-	// Intentar mover una carpeta a un proyecto con una carpeta con el mismo nombre
-	@Test
-	public void testMoveDirectoryFail() throws AuthenticationException {
-		System.out.println("Test move directory fail==================================================");
-		// 1º Crear el workspace
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
-		workspace.persist();
-		// 2º Crear el proyecto origen
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
-		project.persist();
-		// 3º Crear el proyecto destino
-		GDriveProject dest = new GDriveProject("Proyecto destino", workspace.getName(), user, credentials);
-		dest.persist();
-		// 4º Crear las carpetas
-		GDriveDirectory directory = new GDriveDirectory("directory1", workspace.getName(), project.getName(), user,
-				credentials);
-		directory.persist();
-		GDriveDirectory directory2 = new GDriveDirectory("directory1", workspace.getName(), dest.getName(), user,
-				credentials);
-		directory2.persist();
-		// 5º Mover la carpeta al proyecto destino
-		boolean move = directory.move(dest, true);
-		// Comprobamos que no se ha podido realizar la operacion
-		assertTrue(!move);
-		// Comprobar que el proyecto destino contiene solo una carpeta
-		assertTrue(dest.list().getChildren().size() == 1);
-
-	}
-
-	// Intentar mover una carpeta a otra que no sea un proyecto
+	
+	// Intentar mover una carpeta a otra que no sea un directorio
 	@Test
 	public void testMoveDirectoryFail2() throws AuthenticationException {
 		System.out.println("Test move directory fail 2==================================================");
@@ -673,7 +644,7 @@ public class GDriveTest {
 		assertTrue(project.list().toString().contains(file.getName()));
 	}
 
-	// Mover el archivo a otro proyecto
+	//Intentar mover el archivo a otro proyecto
 	@Test
 	public void testMoveFileToProject() throws AuthenticationException {
 		System.out.println("Test move file to project ===========================================================");
@@ -693,13 +664,12 @@ public class GDriveTest {
 		GDriveFile file = new GDriveFile("file2.txt", workspace.getName(), project.getName(), user, credentials);
 		file.persist();
 
-		// Mover el archivo a otro proyecto
+		// Intentar mover el archivo a otro proyecto
 		boolean move = file.move(dest, false);
-		assertTrue(move);
+		assertFalse(move);
 		System.out.println(dest.list().toString());
 		System.out.println(project.list().toString());
-		assertTrue(dest.list().toString().contains(file.getName()));
-		assertTrue(!project.list().toString().contains(file.getName()));
+
 	}
 
 	// Intentar copiar el archivo a otro workspace

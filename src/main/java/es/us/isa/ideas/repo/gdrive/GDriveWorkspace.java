@@ -72,6 +72,8 @@ public class GDriveWorkspace extends Workspace {
 
 			if (gw != null) {
 				LOGGER.log(Level.INFO, "Workspace already exist");
+				//Si ya existe el workspace sale del persist
+				return false;
 			} else {
 
 				File fileMetadata = new File();
@@ -117,7 +119,7 @@ public class GDriveWorkspace extends Workspace {
 		res.setTitle(this.getName());
 		res.setFolder(true);
 		res.setIcon(FSNodeIcon.WORKSPACE);
-		res.setKeyPath(this.getName());
+		//res.setKeyPath(this.getOwner()+"/"+this.getName());
 		res.setType(Node.GOOGLE_DRIVE);
 		try {
 			File workspace = DriveQuickstart.getWorkspaceByName(this.getName(), this.getOwner(), this.credentials);
@@ -125,7 +127,7 @@ public class GDriveWorkspace extends Workspace {
 				LOGGER.log(Level.INFO, "Workspace " + this.getName() + " does not exist.");
 				res = null;
 			} else {
-				res.setChildren(GDriveNode.getChildren(res.getTitle(),res,workspace.getId(), credentials));
+				res.setChildren(GDriveNode.getChildren("",res,workspace.getId(), credentials));
 			}
 		} catch (IOException | GeneralSecurityException e) {
 			e.printStackTrace();

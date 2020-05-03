@@ -355,7 +355,8 @@ public class FSTest {
 	}
 
 	// Mover un archivo de un proyecto a otro
-	@Test
+	
+	//@Test
 	public void testMoveFile() throws AuthenticationException {
 		System.out.println("\nTest move file ============================================");
 

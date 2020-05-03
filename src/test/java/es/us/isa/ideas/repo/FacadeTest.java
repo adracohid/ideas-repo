@@ -418,8 +418,8 @@ public class FacadeTest {
 		Facade.createGDriveWorkspace("Data2", user,credentials);
 		Facade.createGDriveProject("Data2/dataproyect", user,credentials);
 		Facade.createGDriveDirectory("Data2/dataproyect/directory1", user,credentials);
-		Facade.createGDriveProject("Data2/project2", user,credentials);
-		boolean res=Facade.moveGDriveDirectory("Data2/dataproyect/directory1", user,"Data2/project2", false,credentials);
+		Facade.createGDriveDirectory("Data2/dataproyect/directory2",user,credentials);
+		boolean res=Facade.moveGDriveDirectory("Data2/dataproyect/directory1", user,"Data2/dataproyect/directory2", false,credentials);
 		assertTrue(res);
 	}	
 	//Move file

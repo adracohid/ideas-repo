@@ -109,6 +109,8 @@ public class GDriveProject extends Project {
 				LOGGER.log(Level.INFO, "Workspace "+this.getWorkspace()+" does not exist.");
 			}else if(project!=null){
 				LOGGER.log(Level.INFO, "Proyect " + this.getName() + " already exist");
+				//Si ya existe un proyecto se sale del metodo
+				return false;
 			}else {
 			File fileMetadata = new File();
 			fileMetadata.setName(this.getName());
@@ -143,7 +145,7 @@ public class GDriveProject extends Project {
 		res.setTitle(this.getName());
 		res.setFolder(true);
 		res.setIcon(FSNodeIcon.PROJECT);
-		String path=this.getWorkspace()+"/"+this.getName();
+		String path=this.getOwner()+"/"+this.getWorkspace()+"/"+this.getName();
 		res.setKeyPath(path);
 		try {
 			File project=DriveQuickstart.getProjectByName(this.getName(), this.getWorkspace(), this.getOwner(),this.credentials);

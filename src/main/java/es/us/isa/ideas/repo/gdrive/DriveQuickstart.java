@@ -14,6 +14,7 @@ import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Collections;
 import java.util.List;
+import java.util.logging.Level;
 import java.util.logging.Logger;
 
 import com.google.api.client.auth.oauth2.AuthorizationCodeRequestUrl;
@@ -277,9 +278,15 @@ public class DriveQuickstart {
 
 	}
 
-	public static File uploadFile(es.us.isa.ideas.repo.File file,String idParentFolder, Drive credentials) throws IOException, GeneralSecurityException, ObjectClassNotValidException {
+	public static boolean uploadFile(es.us.isa.ideas.repo.File file,String idParentFolder, Drive credentials) throws IOException, GeneralSecurityException, ObjectClassNotValidException {
+		
 		File fileMetadata = new File();
 		String type = null;
+		File f=getFileByName(file.getName(), idParentFolder, credentials);
+		if(f!=null) {
+			LOGGER.log(Level.INFO, "File " + f.getName() + " already exist");
+			return false;
+		}
 		// Si el archivo contiene otro formato Google Drive se encarga de
 		// cambiar el tipo de fichero automaticamente
 		if (file.getName().contains(".txt")) {
@@ -294,16 +301,36 @@ public class DriveQuickstart {
 		java.io.File filePath = new java.io.File(IdeasRepo.get().getObjectFullUri(file));
 		FileContent mediaContent = new FileContent(type, filePath);
 		File gfile = credentials.files().create(fileMetadata, mediaContent).setFields("id").execute();
-		return gfile;
+		return true;
 
 	}
 
 	public static File getDirectoryByName(String name, String project, String workspace, String owner,
 			Drive credentials) throws IOException, GeneralSecurityException {
 		File res;
-		String pageToken = null;
+		String[] splitName = name.split("\\\\");
+		File file=null;
 		
-		File file = getProjectByName(project, workspace, owner, credentials);
+		if(splitName.length>1) { 
+			//Lee de derecha a izquierda todos los directorios recursivamente
+			//directory1\directory2......\directoryn
+		String directoryName="";
+		for(int i=0;i<splitName.length-1;i++) {
+			directoryName+=splitName[i];
+			if(i<splitName.length-2) {
+				directoryName+="\\";
+			}
+		} 
+		file=getDirectoryByName(directoryName, project, workspace, owner, credentials);
+		}else {
+			file=getProjectByName(project, workspace, owner, credentials);
+		}
+		String pageToken = null;
+		//Busqueda recursiva para encontrar el directorio padre
+		
+		
+		
+		//File file = getProjectByName(project, workspace, owner, credentials);
 		// Si no existe el proyecto no devuelve nada
 		if (file == null) {
 			res = null;
@@ -312,7 +339,7 @@ public class DriveQuickstart {
 				FileList result = credentials.files().list()
 						// Busca el fichero dentro del proyecto
 						.setQ("'" + file.getId()
-								+ "' in parents and mimeType='application/vnd.google-apps.folder' and name='" + name
+								+ "' in parents and mimeType='application/vnd.google-apps.folder' and name='" + splitName[splitName.length-1]
 								+ "'")
 						.setSpaces("drive").setFields("nextPageToken, files(id, name)").setPageToken(pageToken)
 						.execute();
@@ -329,6 +356,34 @@ public class DriveQuickstart {
 		return res;
 	}
 
+	public static File getFileByName(String name, String idParentFolder,Drive credentials) throws IOException {
+		File res;
+		File file=null;
+		String pageToken=null;
+		File parentFolder=credentials.files().get(idParentFolder).setFields("name").execute();
+		if(parentFolder==null) {
+			res=null;
+		}else {
+			do {
+				FileList result = credentials.files().list()
+						// Busca el fichero dentro del proyecto
+						.setQ("'" + idParentFolder
+								+ "' in parents and mimeType!='application/vnd.google-apps.folder' and name='" + name
+								+ "'")
+						.setSpaces("drive").setFields("nextPageToken, files(id, name,parents)").setPageToken(pageToken)
+						.execute();
+				// Si no encuentra el fichero devuelve directamente null
+				try {
+					res = result.getFiles().get(0);
+				} catch (IndexOutOfBoundsException e) {
+					System.out.println("The file was not found");
+					res = null;
+				}
+				pageToken = result.getNextPageToken();
+			} while (pageToken != null);
+		}
+		return res;
+	}
 	public static File getFileByName(String name,String directory, String project, String workspace, String owner, Drive credentials)
 			throws IOException, GeneralSecurityException {
 		File res;
@@ -650,14 +705,16 @@ public class DriveQuickstart {
 					//El nombre de un fichero que se guarda en un directorio tiene dos partes
 					//la primera que es el nombre del directorio y la segunda el nombre propio 
 					//del archivo. 					
-					String projectName=node.getKeyPath().split("/")[1];
+					String projectName=node.getKeyPath().split("/")[0];
 					String fileName=node.getTitle()+"/"+child.getTitle();
 					//1º Creamos el fichero local
 					FSFile flocal=new FSFile(fileName,workspaceName,projectName,user);
 					flocal.persist();
 					
 					//2º Descargamos el contenido del fichero de google drive
-					File file=getFileByName(child.getTitle(), node.getTitle(), projectName, workspaceName, user, credentials);
+					//File file=getFileByName(child.getTitle(), node.getTitle(), projectName, workspaceName, user, credentials);
+					File directory=getDirectoryByName(node.getTitle(), projectName, workspaceName, user, credentials);
+					File file=getFileByName(child.getTitle(),directory.getId(),credentials);
 					String content=download(file.getId(), credentials);
 					
 					//3º Escribimos el contenido en el fichero local
@@ -723,7 +780,8 @@ public class DriveQuickstart {
 					//El nombre de un fichero que se guarda en un directorio tiene dos partes
 					//la primera que es el nombre del directorio y la segunda el nombre propio 
 					//del archivo. 
-					String projectName=node.getKeyPath().split("/")[2];
+					String[] split=node.getKeyPath().split("/");
+					String projectName=split[split.length-2];
 					String fileName=node.getTitle()+"/"+child.getTitle();
 					FSFile flocal=new FSFile(fileName,workspaceName,projectName,user);
 					String idParentFolder=getDirectoryByName(node.getTitle(), flocal.getProject(), workspaceName, user, credentials).getId();									
