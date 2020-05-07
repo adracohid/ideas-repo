@@ -47,7 +47,7 @@ public class GDriveDirectory extends Directory {
 				System.out.println(IdeasRepo.get().getObjectFullUri(dest));
 				String[] s1 = IdeasRepo.get().getObjectFullUri(dest).split("//");
 				String[] s2 = s1[1].split("/");
-
+				//String[] s3= s2[s2.length-1].split("\\");
 				if (dest instanceof GDriveDirectory) {
 
 					File folderDest = DriveQuickstart.getDirectoryByName(s2[s2.length - 1], s2[s2.length - 2],
@@ -155,7 +155,7 @@ public class GDriveDirectory extends Directory {
 			}
 					// Comprobamos que no exista un directorio con el mismo nombre
 					com.google.api.services.drive.model.File directory = DriveQuickstart.getDirectoryByName(
-							getDirectoryName(), this.getProject(), this.getWorkspace(), this.getOwner(),
+							this.getName(), this.getProject(), this.getWorkspace(), this.getOwner(),
 							this.getCredentials());
 					if (directory != null) {
 						LOGGER.log(Level.INFO, "Directory " + this.getName() + " already exist");

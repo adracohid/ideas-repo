@@ -645,32 +645,7 @@ public class GDriveTest {
 	}
 
 	//Intentar mover el archivo a otro proyecto
-	@Test
-	public void testMoveFileToProject() throws AuthenticationException {
-		System.out.println("Test move file to project ===========================================================");
-		// 1º Crear el workspace
-		GDriveWorkspace workspace = new GDriveWorkspace("workspace5", user, credentials);
-		workspace.persist();
-		// 2º Crear el proyecto origen
-		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
-		project.persist();
-		// 3º Crear el proyecto destino
-		GDriveProject dest = new GDriveProject("Destino", workspace.getName(), user, credentials);
-		dest.persist();
-		// 4º Crear el directory
 
-		// 5º Crear el archivo
-
-		GDriveFile file = new GDriveFile("file2.txt", workspace.getName(), project.getName(), user, credentials);
-		file.persist();
-
-		// Intentar mover el archivo a otro proyecto
-		boolean move = file.move(dest, false);
-		assertFalse(move);
-		System.out.println(dest.list().toString());
-		System.out.println(project.list().toString());
-
-	}
 
 	// Intentar copiar el archivo a otro workspace
 	@Test
@@ -754,11 +729,13 @@ public class GDriveTest {
 		// Facade.createFile("wfile/proyect1/directp1/datos2.txt", user);
 
 		fdirectory.write("dato1, dato2");
-
+//TODO
 		FSWorkspace wlocal = new FSWorkspace("wfile", user);
 		// DriveQuickstart.uploadWorkspace(wlocal.getName(), user,credentials);
-		boolean upload=wlocal.uploadWorkspaceToGdrive(credentials);
+		
+		boolean upload=wlocal.uploadWorkspaceToGdrive(credentials,true);
 		assertTrue(upload);
+		
 		//Comprobamos que existe el workspace en google drive
 		GDriveWorkspace gw=new GDriveWorkspace(wlocal.getName(), user, credentials);
 		assertTrue(gw.exist());

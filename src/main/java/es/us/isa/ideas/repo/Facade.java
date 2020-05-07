@@ -714,8 +714,8 @@ public class Facade {
 	}
 	
 	
-	public static boolean uploadWorkspace(String workspaceName, String owner, Drive credentials) {
+	public static boolean uploadWorkspace(String workspaceName, String owner, Drive credentials,boolean test) {
 		FSWorkspace w=new FSWorkspace(workspaceName,owner);
-		return w.uploadWorkspaceToGdrive(credentials);
+		return w.uploadWorkspaceToGdrive(credentials,test);
 	}
 }

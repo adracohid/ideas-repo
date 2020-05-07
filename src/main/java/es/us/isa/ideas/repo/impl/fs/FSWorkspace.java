@@ -117,11 +117,11 @@ public class FSWorkspace extends Workspace {
 		}
 		return parentNode;
 	}
-	public boolean uploadWorkspaceToGdrive(Drive credentials) {
+	public boolean uploadWorkspaceToGdrive(Drive credentials, Boolean test) {
 		boolean res=false;
 		try {
 			
-			DriveQuickstart.uploadWorkspace(this.getName(),this.getOwner(), credentials);
+			DriveQuickstart.uploadWorkspace(this.getName(),this.getOwner(), credentials,test);
 			res=true;
 		} catch (IOException | ObjectClassNotValidException | AuthenticationException | GeneralSecurityException | BadUriException e) {
 			e.printStackTrace();

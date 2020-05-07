@@ -39,7 +39,7 @@ import static org.apache.commons.io.FilenameUtils.getExtension;
 public class Othertest {
 	private static String user;
 	private static Drive credentials;
-
+	private static boolean test;
 	private static String userAuthenticated() {
 		DummyAuthenticationManagerDelegate authDelegate = new DummyAuthenticationManagerDelegate("yo");
 		IdeasRepo.setAuthManagerDelegate(authDelegate);
@@ -83,6 +83,7 @@ public class Othertest {
 	public static void setUpBeforeClass() throws Exception {
 		user = userAuthenticated();
 		credentials = DriveQuickstart.driveService();
+		test=true;
 	}
 
 	@AfterClass
@@ -159,7 +160,7 @@ public class Othertest {
 		pfile.persist();
 
 		// 2º Subimos el workspace
-		boolean upload = wlocal.uploadWorkspaceToGdrive(credentials);
+		boolean upload = wlocal.uploadWorkspaceToGdrive(credentials,test);
 		System.out.println(upload);
 	}
 
@@ -268,7 +269,7 @@ public class Othertest {
 
 		FSWorkspace wlocal = new FSWorkspace("wfile", user);
 		// DriveQuickstart.uploadWorkspace(wlocal.getName(), user,credentials);
-		boolean upload=wlocal.uploadWorkspaceToGdrive(credentials);
+		boolean upload=wlocal.uploadWorkspaceToGdrive(credentials,test);
 		assertTrue(upload);
 		//Comprobamos que existe el workspace en google drive
 		GDriveWorkspace gw=new GDriveWorkspace(wlocal.getName(), user, credentials);
@@ -298,7 +299,7 @@ public class Othertest {
 		Facade.createGDriveDirectory("WD/project1/directory1", user, credentials);
 		Facade.createGDriveDirectory("WD/project1/directory1/IntoDirectory", user, credentials);
 		boolean move=Facade.moveGDriveDirectory("WD/project1/directory1/IntoDirectory", user, "WD/project1/directory1", false, credentials);
-		assertTrue(move);
+		assertTrue(!move);
 	}
 	
 	@Test
@@ -315,8 +316,8 @@ public class Othertest {
 		Facade.createGDriveWorkspace("WD", user, credentials);
 		Facade.createGDriveProject("WD/project1", user, credentials);
 		Facade.createGDriveDirectory("WD/project1/directoryDest", user, credentials);
-		Facade.createGDriveDirectory("WD/project1/directoryDest/IntoDirectory", user, credentials);
-	
+		boolean dind=Facade.createGDriveDirectory("WD/project1/directoryDest/IntoDirectory", user, credentials);
+		assertTrue(dind);
 	}
 	@Test
 	public void testCreateFileInDirectory() throws AuthenticationException, BadUriException {
@@ -324,7 +325,30 @@ public class Othertest {
 		Facade.createGDriveProject("WD/project1", user, credentials);
 		Facade.createGDriveDirectory("WD/project1/directory2", user, credentials);
 		Facade.createGDriveDirectory("WD/project1/directory2/IntoDirectory", user, credentials);
+		boolean create=Facade.createGDriveFile("WD/project1/directory2/IntoDirectory/greetings.txt", user, credentials);
+		assertTrue(create);
+	}
+	@Test
+	public void testDownloadWorkspace() throws AuthenticationException, BadUriException {
+		Facade.createGDriveWorkspace("WD", user, credentials);
+		Facade.createGDriveProject("WD/project1", user, credentials);
+		Facade.createGDriveDirectory("WD/project1/directory2", user, credentials);
+		Facade.createGDriveDirectory("WD/project1/directory2/IntoDirectory", user, credentials);
 		Facade.createGDriveFile("WD/project1/directory2/IntoDirectory/greetings.txt", user, credentials);
+		boolean download=Facade.downloadGDriveWorkspace("WD", user, credentials);
+		assertTrue(download);
+	}
+	
+	@Test
+	public void testUploadWorkspace() throws AuthenticationException, BadUriException {
+		Facade.createWorkspace("WLocal", user);
+		Facade.createProject("WLocal/PLocal", user);
+		Facade.createDirectory("WLocal/PLocal/java", user);
+		Facade.createDirectory("WLocal/PLocal/java/main", user);
+		Facade.createDirectory("WLocal/PLocal/java/main/calculos", user);
+		Facade.createFile("WLocal/PLocal/java/main/calculos/suma.java", user);
+		boolean upload=Facade.uploadWorkspace("WLocal", user, credentials,test);
+		assertTrue(upload);
 	}
 
 }

@@ -354,22 +354,8 @@ public class FSTest {
 		}
 	}
 
-	// Mover un archivo de un proyecto a otro
-	
-	//@Test
-	public void testMoveFile() throws AuthenticationException {
-		System.out.println("\nTest move file ============================================");
 
-		FSFile file = new FSFile("Fichero1.txt", workspace2().getName(), "File project", userAuthenticated());
-		file.persist();
-		FSProject p = new FSProject("UserProject", workspace2().getName(), userAuthenticated());
-		p.persist();
 
-		file.move(p, false);
-
-		file.setProject(p.getName());
-		Assert.assertEquals(file.getProject(), p.getName());
-	}
 
 	// Mover un archivo de un workspace a otro
 	@Test

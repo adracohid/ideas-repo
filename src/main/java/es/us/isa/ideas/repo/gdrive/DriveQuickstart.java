@@ -282,7 +282,8 @@ public class DriveQuickstart {
 		
 		File fileMetadata = new File();
 		String type = null;
-		File f=getFileByName(file.getName(), idParentFolder, credentials);
+		String[] fileName=file.getName().split("/");
+		File f=getFileByName(fileName[fileName.length-1], idParentFolder, credentials);
 		if(f!=null) {
 			LOGGER.log(Level.INFO, "File " + f.getName() + " already exist");
 			return false;
@@ -293,7 +294,7 @@ public class DriveQuickstart {
 			type = "text/plain";
 		}
 		
-		String[] fileName=file.getName().split("/");
+		
 		fileMetadata.setName(fileName[fileName.length-1]);
 		//com.google.api.services.drive.model.File project = DriveQuickstart.getProjectByName(file.getProject(),
 		//		file.getWorkspace(), file.getOwner(), credentials);
@@ -377,7 +378,7 @@ public class DriveQuickstart {
 					res = result.getFiles().get(0);
 				} catch (IndexOutOfBoundsException e) {
 					System.out.println("The file was not found");
-					res = null;
+					res = null; 
 				}
 				pageToken = result.getNextPageToken();
 			} while (pageToken != null);
@@ -580,109 +581,46 @@ public class DriveQuickstart {
 		return res;
 
 	}
-/*
-	// TODO
-	public static void downloadWorkspace(String workspaceName, String user, Listable folder, String id,
-			Drive credentials) throws IOException, GeneralSecurityException, AuthenticationException,
-			ObjectClassNotValidException, BadUriException {
 
-		FSWorkspace workspaceLocal = new FSWorkspace(workspaceName, user);
-		java.io.File w = new java.io.File(IdeasRepo.get().getObjectFullUri(workspaceLocal));
-		// Si no existe el workspace en local lo guardamos, si existe no hacemos nada
-
-		if (!w.exists()) {
-			workspaceLocal.persist();
-		}
-
-		// Obtenemos todas las carpetas y por cada carpeta cada subcarpeta y fichero
-		for (File f : getFilesByFolderId(id, credentials)) {
-			if (f.getMimeType().equals("application/vnd.google-apps.folder")) {
-				// 1º Antes de obtener los ficheros de la carpeta creamos la carpeta
-				// en local cuyo nombre es el mismo de la carpeta en Google Drive
-
-				File parent = credentials.files().get(f.getParents().get(0)).setFields("id,name").execute();
-				// Si el parent es distinto del nombre de workspace entonces se
-				// crea un directory cuyo parent es un proyecto
-				if (parent.getName().equals(workspaceName)) {
-					FSProject project = new FSProject(f.getName(), parent.getName(), user);
-					project.persist();
-					System.out.println("Se crea el proyecto: " + project.getName());
-					// Obtenemos los ficheros de la carpeta llamando recursivamente a la funcion
-					downloadWorkspace(workspaceName, user, project, f.getId(), credentials);
-				} else {
-
-					FSDirectory directory = new FSDirectory(f.getName(), workspaceName, parent.getName(), user);
-					directory.persist();
-					System.out.println("Se crea el directorio: " + directory.getName());
-					// Obtenemos los ficheros de la carpeta llamando recursivamente a la funcion
-					downloadWorkspace(workspaceName, user, directory, f.getId(), credentials);
-				}
-
-			} else {
-
-				File parent = credentials.files().get(f.getParents().get(0)).setFields("id,name").execute();
-
-				// 1º Crear un proyecto temporal para guardar todos los ficheros
-				FSProject temporal = new FSProject("temporal", workspaceName, user);
-				temporal.persist();
-				System.out.println("Se crea el proyecto temporal");
-				// 2º Crear el fichero en local y guardarlo en el proyecto temporal
-
-				FSFile fileLocal = new FSFile(f.getName(), workspaceName, temporal.getName(), user);
-				fileLocal.persist();
-				System.out.println("Se crea el fichero en local");
-
-				// 3º Hay que descargar el contenido del fichero y
-				// escribirlo en el fichero local
-				String contenido = download(f.getId(), credentials);
-				fileLocal.write(contenido);
-
-				System.out
-						.println("Se descarga el contenido del fichero y se escribe en un fichero local: " + contenido);
-				// 4º Hacer un fichero.move(parent.getName(),false) que ya estara creado
-				fileLocal.move(folder, false);
-				System.out.println("Se mueve el fichero del proyecto temporal a la carpeta destino");
-				// 5º Borrar el proyecto temporal
-				temporal.delete();
-				System.out.println("Se borra el proyecto temporal");
-
-			}
-		}
-		// Al final del todo se borra el workspace de Google Drive
-		credentials.files().delete(id).execute();
-
-	}
-*/
 	public static void downloadWorkspace(String workspaceName,String user, Drive credentials) throws AuthenticationException, IOException, GeneralSecurityException, BadUriException, ObjectClassNotValidException {
 	FSWorkspace workspaceLocal=new FSWorkspace(workspaceName,user);
 	workspaceLocal.persist();
 	GDriveWorkspace gworkspace=new GDriveWorkspace(workspaceName, user, credentials);
 	FSNode wNode=(FSNode) IdeasRepo.get().getRepo("GDRIVE").list(gworkspace);
-	getGDriveTree(wNode,workspaceName,user,credentials);
+	getGDriveTree(wNode,workspaceName,null,user,credentials);
 	String workspaceId=getWorkspaceByName(workspaceName, user, credentials).getId();
 	
 	//Al final del todo se borra el workspace de Google Drive
 	credentials.files().delete(workspaceId).execute();
 	
 	}
-	private static void getGDriveTree(FSNode node, String workspaceName, String user, Drive credentials) throws AuthenticationException, IOException, GeneralSecurityException, BadUriException, ObjectClassNotValidException {
+	private static void getGDriveTree(FSNode node, String workspaceName,String pName, String user, Drive credentials) throws AuthenticationException, IOException, GeneralSecurityException, BadUriException, ObjectClassNotValidException {
 		for (int i = 0; i < node.getChildren().size(); i++) {
 			FSNode child = (FSNode) node.getChildren().get(i);
 			System.out.println(child.getTitle());
+			
 			if (child.isFolder()) {
 				System.out.println(child.getIcon());
 				if(child.getIcon().equals("project_icon")) {
 					String projectName=child.getTitle();
 					FSProject project=new FSProject(projectName,workspaceName,user);
 					project.persist();
-					getGDriveTree(child,workspaceName,user,credentials);
+					getGDriveTree(child,workspaceName,projectName,user,credentials);
 				}else {
-					String directoryName=child.getTitle();
-					String projectName=node.getTitle();
+					String directoryName="";
+					String[] splitURI=child.getKeyPath().split("/");
+					for(int j=1;j<splitURI.length;j++) {
+						directoryName+=splitURI[j];
+						if(j<splitURI.length-1) {
+							directoryName+="\\";
+						}
+					}
+					
+					String projectName=pName;
 					FSDirectory directory=new FSDirectory(directoryName,workspaceName,projectName,user);
 					directory.persist();
 					
-					getGDriveTree(child,workspaceName,user,credentials);
+					getGDriveTree(child,workspaceName,projectName,user,credentials);
 				}
 			
 			}else {
@@ -704,16 +642,26 @@ public class DriveQuickstart {
 				}else {		
 					//El nombre de un fichero que se guarda en un directorio tiene dos partes
 					//la primera que es el nombre del directorio y la segunda el nombre propio 
-					//del archivo. 					
-					String projectName=node.getKeyPath().split("/")[0];
-					String fileName=node.getTitle()+"/"+child.getTitle();
+					//del archivo. 	
+					String directoryName="";
+					String[] splitURI=node.getKeyPath().split("/");
+					for(int j=1;j<splitURI.length;j++) {
+						directoryName+=splitURI[j];
+						if(j<splitURI.length-1) {
+							directoryName+="\\";
+						}
+					}
+					String projectName=splitURI[0];
+					String fileName=directoryName+"/"+child.getTitle();
+					
+					//String fileName=node.getTitle()+"/"+child.getTitle();
 					//1º Creamos el fichero local
 					FSFile flocal=new FSFile(fileName,workspaceName,projectName,user);
 					flocal.persist();
 					
 					//2º Descargamos el contenido del fichero de google drive
 					//File file=getFileByName(child.getTitle(), node.getTitle(), projectName, workspaceName, user, credentials);
-					File directory=getDirectoryByName(node.getTitle(), projectName, workspaceName, user, credentials);
+					File directory=getDirectoryByName(directoryName, projectName, workspaceName, user, credentials);
 					File file=getFileByName(child.getTitle(),directory.getId(),credentials);
 					String content=download(file.getId(), credentials);
 					
@@ -728,7 +676,7 @@ public class DriveQuickstart {
 			}
 }
 
-	public static void uploadWorkspace(String workspaceName, String user, Drive credentials)
+	public static void uploadWorkspace(String workspaceName, String user, Drive credentials, Boolean test)
 			throws AuthenticationException, IOException, GeneralSecurityException, BadUriException, ObjectClassNotValidException {
 		
 		FSWorkspace ws = new FSWorkspace(workspaceName, user);
@@ -740,14 +688,14 @@ public class DriveQuickstart {
 		System.out.println(wsNode.getChildren().size());
 		
 		//Hace una busqueda recursiva por las carpetas
-		getTree(wsNode,workspaceName,user,credentials);
+		getTree(wsNode,workspaceName,null,user,credentials,test);
 		//Y al final del todo se borra el workspace local
 
 		ws.delete();
 		}
 	
 
-	private static void getTree(FSNode node,String workspaceName,String user,Drive credentials) throws AuthenticationException, IOException, GeneralSecurityException, BadUriException, ObjectClassNotValidException {
+	private static void getTree(FSNode node,String workspaceName,String project,String user,Drive credentials, Boolean test) throws AuthenticationException, IOException, GeneralSecurityException, BadUriException, ObjectClassNotValidException {
 		
 		for (int i = 0; i < node.getChildren().size(); i++) {
 			FSNode child = (FSNode) node.getChildren().get(i);
@@ -758,13 +706,31 @@ public class DriveQuickstart {
 					String projectName=child.getTitle();
 					GDriveProject gproject=new GDriveProject(projectName,workspaceName,user,credentials);
 					gproject.persist();
-					getTree(child,workspaceName,user,credentials);
+					getTree(child,workspaceName,projectName,user,credentials,test);
 				}else {
-					String directoryName=child.getTitle();
-					String projectName=node.getTitle();
+					String directoryName="";
+					String[] splitURI=child.getKeyPath().split("/");
+					if(test) {
+						for(int j=3;j<splitURI.length;j++) {
+							directoryName+=splitURI[j];
+							if(j<splitURI.length-1) {
+								directoryName+="\\";
+							}
+						}
+					}else {
+						for(int j=1;j<splitURI.length;j++) {
+							directoryName+=splitURI[j];
+							if(j<splitURI.length-1) {
+								directoryName+="\\";
+							}
+						}
+					}
+						
+					
+					String projectName=project;
 					GDriveDirectory gdirectory=new GDriveDirectory(directoryName,workspaceName,projectName,user,credentials);
 					gdirectory.persist();
-					getTree(child,workspaceName,user,credentials);
+					getTree(child,workspaceName,projectName,user,credentials,test);
 				}
 			
 			}else {
@@ -780,11 +746,31 @@ public class DriveQuickstart {
 					//El nombre de un fichero que se guarda en un directorio tiene dos partes
 					//la primera que es el nombre del directorio y la segunda el nombre propio 
 					//del archivo. 
-					String[] split=node.getKeyPath().split("/");
-					String projectName=split[split.length-2];
-					String fileName=node.getTitle()+"/"+child.getTitle();
+					String directoryName="";
+					String[] splitURI=node.getKeyPath().split("/");
+					
+						
+					if(test) {
+						for(int j=3;j<splitURI.length;j++) {
+							directoryName+=splitURI[j];
+							if(j<splitURI.length-1) {
+								directoryName+="\\";
+							}
+						}	
+					}else {
+					for(int j=1;j<splitURI.length;j++) {
+						directoryName+=splitURI[j];
+						if(j<splitURI.length-1) {
+							directoryName+="\\";
+						}
+					}
+					}
+					
+					String[] splitdirectory=directoryName.split("\\\\");
+					String projectName=splitURI[splitURI.length-1-splitdirectory.length];
+					String fileName=directoryName+"/"+child.getTitle();
 					FSFile flocal=new FSFile(fileName,workspaceName,projectName,user);
-					String idParentFolder=getDirectoryByName(node.getTitle(), flocal.getProject(), workspaceName, user, credentials).getId();									
+					String idParentFolder=getDirectoryByName(directoryName, flocal.getProject(), workspaceName, user, credentials).getId();									
 					
 					uploadFile(flocal, idParentFolder, credentials);
 				}

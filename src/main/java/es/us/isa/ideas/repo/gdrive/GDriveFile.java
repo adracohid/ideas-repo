@@ -80,8 +80,9 @@ public class GDriveFile extends File {
 	protected boolean moveImpl(Listable dest, boolean copy) {
 		boolean res = false;
 		try {
-			com.google.api.services.drive.model.File file = DriveQuickstart.getFileByName(this.getName(), null,
-					this.getProject(), this.getWorkspace(), this.getOwner(), this.credentials);
+			com.google.api.services.drive.model.File parentFolder = getParentFolder();
+			com.google.api.services.drive.model.File file = DriveQuickstart.getFileByName(getFileName(),
+					parentFolder.getId(), this.credentials);
 			if (file == null) {
 				LOGGER.log(Level.INFO, "File " + this.getName() + " does not exist.");
 
@@ -90,20 +91,17 @@ public class GDriveFile extends File {
 				// System.out.println(IdeasRepo.get().getObjectFullUri(dest));
 				String[] s1 = IdeasRepo.get().getObjectFullUri(dest).split("//");
 				String[] s2 = s1[1].split("/");
-				com.google.api.services.drive.model.File fileInFolder = null;
 				com.google.api.services.drive.model.File folder = null;
-				/*
-				 * if (dest instanceof GDriveProject) { folder =
-				 * DriveQuickstart.getProjectByName(s2[s2.length - 1], s2[s2.length - 2],
-				 * s2[s2.length - 3], this.credentials); fileInFolder=
-				 * DriveQuickstart.getFileByName( this.getName(),null, folder.getName(),
-				 * this.getWorkspace(), this.getOwner(), this.getCredentials()); } else
-				 */if (dest instanceof GDriveDirectory) {
+
+				if (dest instanceof GDriveProject) {
+					folder = DriveQuickstart.getProjectByName(s2[s2.length - 1], s2[s2.length - 2], s2[s2.length - 3],
+							this.credentials);
+				} else if (dest instanceof GDriveDirectory) {
 					folder = DriveQuickstart.getDirectoryByName(s2[s2.length - 1], s2[s2.length - 2], s2[s2.length - 3],
 							s2[s2.length - 4], this.credentials);
 					directoryName = s2[s2.length - 1];
-					fileInFolder = DriveQuickstart.getFileByName(this.getName(), directoryName, this.getProject(),
-							this.getWorkspace(), this.getOwner(), this.getCredentials());
+//					fileInFolder = DriveQuickstart.getFileByName(this.getName(), directoryName, this.getProject(),
+					// this.getWorkspace(), this.getOwner(), this.getCredentials());
 				} else {
 					LOGGER.log(Level.INFO, "The target folder must be a directory");
 				}
@@ -111,20 +109,15 @@ public class GDriveFile extends File {
 					LOGGER.log(Level.INFO, "Folder " + dest.getClass().getName() + " does not exist.");
 
 				} else {
-					// Comprobamos si el fichero existe dentro del folder
 
-					if (fileInFolder == null) {
-						if (copy) {
-							DriveQuickstart.copyFileToFolder(file.getId(), folder.getId(), credentials);
-						} else {
-							DriveQuickstart.moveFileToFolder(file.getId(), folder.getId(), credentials);
-
-						}
-						res = true;
+					if (copy) {
+						DriveQuickstart.copyFileToFolder(file.getId(), folder.getId(), credentials);
 					} else {
-						LOGGER.log(Level.INFO, "Cannot move a file with the same name.");
-						return false;
+						DriveQuickstart.moveFileToFolder(file.getId(), folder.getId(), credentials);
+
 					}
+					res = true;
+
 				}
 			}
 
@@ -264,26 +257,27 @@ public class GDriveFile extends File {
 		// Hacer un split del nombre
 		String[] splitName = this.getName().split("\\\\");
 		com.google.api.services.drive.model.File parentFolder = null;
-		String directoryName="";
-		
+		String directoryName = "";
+
 		// El directorio (carpeta padre) sera split.lengh - 2
-		//workspace/project/directory1\directory2\...\file
-		if(splitName.length>2) {
-			for(int i=0;i<splitName.length-1;i++) {
-				directoryName+=splitName[i];
-				if(i<splitName.length-2) {
-					directoryName+="\\";
+		// workspace/project/directory1\directory2\...\file
+		if (splitName.length > 2) {
+			for (int i = 0; i < splitName.length - 1; i++) {
+				directoryName += splitName[i];
+				if (i < splitName.length - 2) {
+					directoryName += "\\";
 				}
 			}
-			parentFolder=DriveQuickstart.getDirectoryByName(directoryName, this.getProject(), this.getWorkspace(), this.getOwner(), this.getCredentials());
-		}//workspace/project/directory\file
+			parentFolder = DriveQuickstart.getDirectoryByName(directoryName, this.getProject(), this.getWorkspace(),
+					this.getOwner(), this.getCredentials());
+		} // workspace/project/directory\file
 		else if (splitName.length > 1) {
 			directoryName = splitName[splitName.length - 2];
-			//Hay que buscar el directory por el parentDirectory
+			// Hay que buscar el directory por el parentDirectory
 			parentFolder = DriveQuickstart.getDirectoryByName(directoryName, this.getProject(), this.getWorkspace(),
 					this.getOwner(), this.getCredentials());
 
-		} else {//workspace/project/file
+		} else {// workspace/project/file
 			parentFolder = DriveQuickstart.getProjectByName(this.getProject(), this.getWorkspace(), this.getOwner(),
 					this.getCredentials());
 		}

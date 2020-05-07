@@ -500,4 +500,72 @@ public class FacadeTest {
 		assertTrue(res);
 	}
 	
+	@Test
+	public void testMoveDirectoryToDirectory() throws AuthenticationException, BadUriException {
+		Facade.createGDriveWorkspace("WD", user, credentials);
+		Facade.createGDriveProject("WD/project1", user, credentials);
+		Facade.createGDriveDirectory("WD/project1/directoryDest", user, credentials);
+		Facade.createGDriveDirectory("WD/project1/directoryOrigin", user, credentials);
+		Facade.moveGDriveDirectory("WD/project1/directoryOrigin", user, "WD/project1/directoryDest", false, credentials);
+
+	}
+	
+	@Test
+	public void testMoveDirectoryToParentDirectory() throws BadUriException, AuthenticationException {
+		Facade.createGDriveWorkspace("WD", user, credentials);
+		Facade.createGDriveProject("WD/project1", user, credentials);
+		Facade.createGDriveDirectory("WD/project1/directory1", user, credentials);
+		Facade.createGDriveDirectory("WD/project1/directory1/IntoDirectory", user, credentials);
+		boolean move=Facade.moveGDriveDirectory("WD/project1/directory1/IntoDirectory", user, "WD/project1/directory1", false, credentials);
+		assertTrue(!move);
+	}
+	
+	@Test
+	public void testMoveDirectoryToSameProject() throws BadUriException, AuthenticationException {
+		Facade.createGDriveWorkspace("WorkspaceD", user, credentials);
+		Facade.createGDriveProject("WorkspaceD/projecto2", user, credentials);
+		Facade.createGDriveDirectory("WorkspaceD/projecto2/datos", user, credentials);
+		Facade.createGDriveDirectory("WorkspaceD/projecto2/datos/clima", user, credentials);
+		boolean move= Facade.moveGDriveDirectory("WorkspaceD/projecto2/datos/clima", user, "WorkspaceD/projecto2", true, credentials);
+		assertTrue(move);
+	}
+	@Test
+	public void testCreateDirectoryInDirectory() throws BadUriException, AuthenticationException {
+		Facade.createGDriveWorkspace("WD", user, credentials);
+		Facade.createGDriveProject("WD/project1", user, credentials);
+		Facade.createGDriveDirectory("WD/project1/directoryDest", user, credentials);
+		boolean dind=Facade.createGDriveDirectory("WD/project1/directoryDest/IntoDirectory", user, credentials);
+		assertTrue(dind);
+	}
+	@Test
+	public void testCreateFileInDirectory() throws AuthenticationException, BadUriException {
+		Facade.createGDriveWorkspace("WD", user, credentials);
+		Facade.createGDriveProject("WD/project1", user, credentials);
+		Facade.createGDriveDirectory("WD/project1/directory2", user, credentials);
+		Facade.createGDriveDirectory("WD/project1/directory2/IntoDirectory", user, credentials);
+		boolean create=Facade.createGDriveFile("WD/project1/directory2/IntoDirectory/greetings.txt", user, credentials);
+		assertTrue(create);
+	}
+	@Test
+	public void testDownloadWorkspace() throws AuthenticationException, BadUriException {
+		Facade.createGDriveWorkspace("WD", user, credentials);
+		Facade.createGDriveProject("WD/project1", user, credentials);
+		Facade.createGDriveDirectory("WD/project1/directory2", user, credentials);
+		Facade.createGDriveDirectory("WD/project1/directory2/IntoDirectory", user, credentials);
+		Facade.createGDriveFile("WD/project1/directory2/IntoDirectory/greetings.txt", user, credentials);
+		boolean download=Facade.downloadGDriveWorkspace("WD", user, credentials);
+		assertTrue(download);
+	}
+	
+	@Test
+	public void testUploadWorkspace() throws AuthenticationException, BadUriException {
+		Facade.createWorkspace("WLocal", user);
+		Facade.createProject("WLocal/PLocal", user);
+		Facade.createDirectory("WLocal/PLocal/java", user);
+		Facade.createDirectory("WLocal/PLocal/java/main", user);
+		Facade.createDirectory("WLocal/PLocal/java/main/calculos", user);
+		Facade.createFile("WLocal/PLocal/java/main/calculos/suma.java", user);
+		boolean upload=Facade.uploadWorkspace("WLocal", user, credentials,true);
+		assertTrue(upload);
+	}
 }
