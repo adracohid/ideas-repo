@@ -568,4 +568,17 @@ public class FacadeTest {
 		boolean upload=Facade.uploadWorkspace("WLocal", user, credentials,true);
 		assertTrue(upload);
 	}
+	@Test
+	public void testMoveDirectoryInDirectory() throws BadUriException, AuthenticationException {
+		Facade.createGDriveWorkspace("WD1", user, credentials);
+		Facade.createGDriveProject("WD1/project1", user, credentials);
+		Facade.createGDriveDirectory("WD1/project1/directory2", user, credentials);
+		Facade.createGDriveDirectory("WD1/project1/directory2/IntoDirectory", user, credentials);
+		Facade.createGDriveDirectory("WD1/project1/directory2/IntoDirectory/directory3", user, credentials);
+
+		Facade.createGDriveDirectory("WD1/project1/directory1", user, credentials);
+		boolean move=Facade.moveGDriveDirectory("WD1/project1/directory1", user, "WD1/project1/directory2/IntoDirectory/directory1",false, credentials);
+
+		assertTrue(move);
+	}
 }

@@ -47,10 +47,11 @@ public class GDriveDirectory extends Directory {
 				System.out.println(IdeasRepo.get().getObjectFullUri(dest));
 				String[] s1 = IdeasRepo.get().getObjectFullUri(dest).split("//");
 				String[] s2 = s1[1].split("/");
+				String folderDestName = s2[s2.length-1].replaceFirst("\\\\[^\\\\]+?$", "");
 				//String[] s3= s2[s2.length-1].split("\\");
 				if (dest instanceof GDriveDirectory) {
 
-					File folderDest = DriveQuickstart.getDirectoryByName(s2[s2.length - 1], s2[s2.length - 2],
+					File folderDest = DriveQuickstart.getDirectoryByName(folderDestName, s2[s2.length - 2],
 							s2[s2.length - 3], s2[s2.length - 4], this.credentials);
 					// La carpeta destino debe ser distinta a la carpeta de origen
 					if (!folderDest.equals(directoryOrigen)) {
@@ -64,6 +65,7 @@ public class GDriveDirectory extends Directory {
 
 						DriveQuickstart.moveFileToFolder(directoryOrigen.getId(), folderDest.getId(),
 								this.getCredentials());
+
 						res= true;
 					}
 				} else if (dest instanceof GDriveProject) {
@@ -231,14 +233,11 @@ public class GDriveDirectory extends Directory {
 		String[] splitName = this.getName().split("\\\\");
 		com.google.api.services.drive.model.File parentFolder = null;
 		// El directorio (carpeta padre) sera split.lengh - 2
+
 		if (splitName.length > 1) {
-			String directoryName="";
-			for(int i=0;i<splitName.length-1;i++) {
-				directoryName+=splitName[i];
-				if(i<splitName.length-2) {
-					directoryName+="\\";
-				}
-			}
+
+			String directoryName=this.getName().replaceFirst("\\\\[^\\\\]+?$", "");
+
 			parentFolder = DriveQuickstart.getDirectoryByName(directoryName, this.getProject(), this.getWorkspace(),
 					this.getOwner(), this.getCredentials());
 

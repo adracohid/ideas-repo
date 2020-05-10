@@ -102,6 +102,7 @@ public class FSNodeBuilder {
 
 			res = aux.replace(aux.split("/")[0], "");
 			res = res.replaceFirst("/[^/]+?/", "");
+			
 
 		} else {
 			String aux = absPath.substring(absPath.indexOf(path));

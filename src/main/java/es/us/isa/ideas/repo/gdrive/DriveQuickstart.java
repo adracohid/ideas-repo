@@ -268,7 +268,8 @@ public class DriveQuickstart {
 		// 2º Actualiza el fichero añadiendo como parent la carpeta destino y borrando
 		// la carpeta origen
 		Update update = credentials.files().update(fileId, new File());
-		update.setFields("id, parents");
+		//update.setFields("id, parents");
+		update.setFields("id,parents");
 		update.setAddParents(folderId);
 		update.setRemoveParents(parents);
 
@@ -277,6 +278,8 @@ public class DriveQuickstart {
 		
 
 	}
+	
+
 
 	public static boolean uploadFile(es.us.isa.ideas.repo.File file,String idParentFolder, Drive credentials) throws IOException, GeneralSecurityException, ObjectClassNotValidException {
 		
@@ -315,13 +318,8 @@ public class DriveQuickstart {
 		if(splitName.length>1) { 
 			//Lee de derecha a izquierda todos los directorios recursivamente
 			//directory1\directory2......\directoryn
-		String directoryName="";
-		for(int i=0;i<splitName.length-1;i++) {
-			directoryName+=splitName[i];
-			if(i<splitName.length-2) {
-				directoryName+="\\";
-			}
-		} 
+			String directoryName=name.replaceFirst("\\\\[^\\\\]+?$", "");
+
 		file=getDirectoryByName(directoryName, project, workspace, owner, credentials);
 		}else {
 			file=getProjectByName(project, workspace, owner, credentials);

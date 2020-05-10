@@ -262,12 +262,8 @@ public class GDriveFile extends File {
 		// El directorio (carpeta padre) sera split.lengh - 2
 		// workspace/project/directory1\directory2\...\file
 		if (splitName.length > 2) {
-			for (int i = 0; i < splitName.length - 1; i++) {
-				directoryName += splitName[i];
-				if (i < splitName.length - 2) {
-					directoryName += "\\";
-				}
-			}
+			directoryName=this.getName().replaceFirst("\\\\[^\\\\]+?$", "");
+
 			parentFolder = DriveQuickstart.getDirectoryByName(directoryName, this.getProject(), this.getWorkspace(),
 					this.getOwner(), this.getCredentials());
 		} // workspace/project/directory\file

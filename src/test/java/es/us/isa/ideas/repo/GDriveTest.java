@@ -611,6 +611,49 @@ public class GDriveTest {
 
 	}
 
+	//Mover un directorio a otro directorio
+	@Test
+	public void testMoveDirectoryToDirectory() throws AuthenticationException {
+		// 1º Crear el workspace
+		GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
+		workspace.persist();
+		// 2º Crear el proyecto
+		GDriveProject project = new GDriveProject("project1", workspace.getName(), user, credentials);
+		project.persist();
+		//3º Crear el directorio origen
+		GDriveDirectory dirOrigin=new GDriveDirectory("dirOrigin", workspace.getName(), project.getName(), user, credentials);
+		dirOrigin.persist();
+		//4º Crear el directorio destino
+		GDriveDirectory dirDest1=new GDriveDirectory("dirDest1",workspace.getName(),project.getName(),user,credentials);
+		dirDest1.persist();
+		GDriveDirectory dirDest2=new GDriveDirectory("dirDest1\\dirDest2",workspace.getName(),project.getName(),user,credentials);
+		dirDest2.persist();
+		
+		
+		//Mover el directorio
+		GDriveDirectory dest=new GDriveDirectory("dirDest1\\dirDest2\\dirOrigin", workspace.getName(), project.getName(), user, credentials);
+		boolean move=dirOrigin.move(dirDest2, false);
+		assertTrue(move);
+	}
+	
+	//Mover un directorio al mismo directorio
+	@Test
+	public void testMoveDirectoryToSameDirectory() throws AuthenticationException {
+		// 1º Crear el workspace
+				GDriveWorkspace workspace = new GDriveWorkspace("workspace4", user, credentials);
+				workspace.persist();
+				// 2º Crear el proyecto
+				GDriveProject project = new GDriveProject("project2", workspace.getName(), user, credentials);
+				project.persist();
+				
+				//3º Crear el directorio
+				GDriveDirectory dir=new GDriveDirectory("D", workspace.getName(), project.getName(), user, credentials);
+				dir.persist();
+				
+				//4º Mover al mismo directorio
+				boolean move=dir.move(dir, true);
+				assertFalse(move);
+	}
 	// Mover
 	// archivos###################################################################################
 
