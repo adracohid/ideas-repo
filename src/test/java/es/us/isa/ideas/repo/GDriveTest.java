@@ -450,7 +450,7 @@ public class GDriveTest {
 
 
 		// 4º Se sube el fichero
-		GDriveFile file = new GDriveFile("datos5.txt", workspace.getName(), project.getName(), user, credentials);
+		GDriveFile file = new GDriveFile("datos5.csv", workspace.getName(), project.getName(), user, credentials);
 		file.persist();
 		// Escribir en el archivo
 		boolean write = file.write("DATOS".getBytes());

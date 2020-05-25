@@ -194,49 +194,34 @@ public class DriveQuickstart {
 
 	public static void writeFile(String id, String msg, Drive credentials)
 			throws IOException, GeneralSecurityException {
-		// Hay que comprobar que el fichero existe
-		File f = credentials.files().get(id).setFields("name, parents").execute();
-		String res = "";
-		//res = download(id, credentials) + msg;
-		// TODO
-		 res=msg;
-		// 3º Creamos el buffer de escritura
-		ByteArrayInputStream bais = new ByteArrayInputStream(res.getBytes());
-		InputStreamContent content = new InputStreamContent("text/plain", bais);
-		// 4º Creamos un fichero nuevo donde se va a añadir los datos
+		
+		File f=credentials.files().get(id).setFields("mimeType").execute();
+		String type=f.getMimeType();
+//		String res = "";
 
-		System.out.println("Name: " + f.getName());
-		File copy = credentials.files().create(new File().setName(f.getName()), content).setFields("id").execute();
-		// Movemos el nuevo fichero a la carpeta del archivo de origen
-		System.out.println("Carpeta: " + f.getParents().get(0));
+//		 res=msg;
+		// 1º Creamos el buffer de escritura
+		ByteArrayInputStream bais = new ByteArrayInputStream(msg.getBytes());
+		//El contenido que se añada al fichero debe ser del mismo tipo que el fichero
+		InputStreamContent content = new InputStreamContent(type, bais);
+		//2º Actualizamos el fichero
+		
+		credentials.files().update(id, new File(), content).execute();
+		
 
-		moveFileToFolder(copy.getId(), f.getParents().get(0), credentials);
-
-		// Finalmente eliminamos el fichero de origen
-		delete(id, credentials);
 	}
 
 	public static void writeFileAsByte(String id, byte[] msg, Drive credentials)
 			throws IOException, GeneralSecurityException {
-
-		// Hay que comprobar que el fichero existe
-		File f = credentials.files().get(id).setFields("name, parents").execute();
-		// 1º Copiamos el contenido del fichero
-		String s = "";
-		s = s + download(id, credentials);
-		// 2º Añadimos al contenido los datos a escribir
-		byte[] b = Bytes.concat(s.getBytes(), msg);
-
-		// 3º Creamos el buffer de escritura
-		ByteArrayInputStream bais = new ByteArrayInputStream(b);
-		InputStreamContent content = new InputStreamContent("text/plain", bais);
-		// 4º Creamos un fichero nuevo donde se va a añadir los datos
-		System.out.println("Nombre: " + f.getName());
-		File copy = credentials.files().create(new File().setName(f.getName()), content).setFields("id").execute();
-		// Movemos el nuevo fichero a la carpeta del archivo de origen
-		moveFileToFolder(copy.getId(), f.getParents().get(0), credentials);
-		// Finalmente eliminamos el fichero de origen
-		delete(id, credentials);
+		File f=credentials.files().get(id).setFields("mimeType").execute();
+		String type=f.getMimeType();
+		// 1º Creamos el buffer de escritura
+		ByteArrayInputStream bais = new ByteArrayInputStream(msg);
+		InputStreamContent content = new InputStreamContent(type, bais);
+		
+		//2º Actualizamos el fichero	
+		credentials.files().update(id, new File(), content).execute();
+		
 
 	}
 
