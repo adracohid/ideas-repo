@@ -34,23 +34,26 @@ public class FacadeTest {
 	private static String user;
 	private static Drive credentials;
 
-	private static void deleteFSWorkspaces(String owner) {
+	private static boolean deleteFSWorkspaces(String owner) {
+		boolean res=false;
 		FSRepo r = new FSRepo();
 		java.io.File f = new java.io.File(r.getRepoUri() + owner);
 		String[] wsList = f.list();
 		if (wsList.length != 0) {
 			for (int i = 0; i < wsList.length; i++) {
 				try {
-					Facade.deleteWorkspace(wsList[i], user);
+					res=Facade.deleteWorkspace(wsList[i], user);
 				} catch (AuthenticationException | BadUriException e) {
 					// TODO Auto-generated catch block
 					e.printStackTrace();
 				}
 			}
 		}
+		return res;
 	}
 
-	private static void deleteGDriveWorkspace(String owner) {
+	private static boolean deleteGDriveWorkspace(String owner) {
+		boolean res=false;
 		File repoFolder;
 		GDriveRepo gdr = new GDriveRepo(credentials);
 		try {
@@ -58,12 +61,13 @@ public class FacadeTest {
 
 			List<File> folders = new ArrayList<>(DriveQuickstart.getFoldersByFolderId(repoFolder.getId(),credentials));
 			for (File f : folders) {
-				Facade.deleteGDriveWorkspace(f.getName(), user, credentials);
+				res=Facade.deleteGDriveWorkspace(f.getName(), user, credentials);
 			}
 		} catch (IOException | GeneralSecurityException | AuthenticationException | BadUriException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		return res;
 	}
 
 	@BeforeClass
@@ -75,8 +79,10 @@ public class FacadeTest {
 	@AfterClass
 	public static void tearDownAfterClass() throws Exception {
 		//una vez terminados los tests borramos todos los workspaces y el fichero .history
-		deleteFSWorkspaces(user);
-		deleteGDriveWorkspace(user);
+		boolean wlocal=deleteFSWorkspaces(user);
+		assertTrue(wlocal);
+		boolean wgdrive=deleteGDriveWorkspace(user);
+		assertTrue(wgdrive);
 		FSFile history = (FSFile) Facade.getFileFromUri("//.history",user);
 		history.delete();
 	}

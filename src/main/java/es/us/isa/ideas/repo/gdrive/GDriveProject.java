@@ -145,7 +145,8 @@ public class GDriveProject extends Project {
 		res.setTitle(this.getName());
 		res.setFolder(true);
 		res.setIcon(FSNodeIcon.PROJECT);
-		String path=this.getOwner()+"/"+this.getWorkspace()+"/"+this.getName();
+		//String path=this.getOwner()+"/"+this.getWorkspace()+"/"+this.getName();
+		String path=this.getWorkspace()+"/"+this.getName();
 		res.setKeyPath(path);
 		try {
 			File project=DriveQuickstart.getProjectByName(this.getName(), this.getWorkspace(), this.getOwner(),this.credentials);

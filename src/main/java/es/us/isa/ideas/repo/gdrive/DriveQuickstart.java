@@ -186,12 +186,24 @@ public class DriveQuickstart {
 		File f = credentials.files().get(id).setFields("name").execute();
 		if (f != null) {
 			f.setName(newName);
+			
 			credentials.files().update(id, f).execute();
 			res = true;
 		}
 		return res;
 	}
 
+	public static boolean updateGdriveWorkspace(String id, String newName,String newDescription, Drive credentials) throws IOException {
+		boolean res = false;
+		File f = credentials.files().get(id).setFields("name,description").execute();
+		if (f != null) {
+			f.setName(newName);
+			f.setDescription(newDescription);
+			credentials.files().update(id, f).execute();
+			res = true;
+		}
+		return res;
+	}
 	public static void writeFile(String id, String msg, Drive credentials)
 			throws IOException, GeneralSecurityException {
 		
@@ -460,7 +472,7 @@ public class DriveQuickstart {
 					// y que tenga el mismo nombre que el usuario
 					.setQ("'" + getRepoFolder(owner, credentials).getId()
 							+ "' in parents and mimeType='application/vnd.google-apps.folder' and name='" + name + "'")
-					.setSpaces("drive").setFields("nextPageToken, files(id, name)").setPageToken(pageToken).execute();
+					.setSpaces("drive").setFields("nextPageToken, files(id, name, description)").setPageToken(pageToken).execute();
 			// Si no encuentra el workspace devuelve directamente null
 			try {
 
@@ -473,6 +485,12 @@ public class DriveQuickstart {
 		} while (pageToken != null);
 		return res;
 
+	}
+	public static List<File> getWorkspacesByOwner(String owner, Drive credentials) throws IOException, GeneralSecurityException{
+		List<File> res=new ArrayList<>();
+		String folderId = getRepoFolder(owner, credentials).getId();
+		res.addAll(getFoldersByFolderId(folderId, credentials));
+		return res;
 	}
 
 	public static File getRepoFolder(String owner, Drive credentials) throws IOException, GeneralSecurityException {
@@ -574,6 +592,7 @@ public class DriveQuickstart {
 	String workspaceId=getWorkspaceByName(workspaceName, user, credentials).getId();
 	
 	//Al final del todo se borra el workspace de Google Drive
+	Facade.deleteLastNodes(workspaceName, wNode, user, credentials);
 	credentials.files().delete(workspaceId).execute();
 	
 	}
@@ -799,7 +818,7 @@ public class DriveQuickstart {
 		String pageToken = null;
 		do {
 			FileList result = credentials.files().list()
-					// Busca todos los archivos que no sean carpetas
+					// Busca todos los archivos que sean carpetas
 					.setQ("'" + id + "' in parents and mimeType = 'application/vnd.google-apps.folder'")
 					.setSpaces("drive").setFields("nextPageToken, files(id, name)").setPageToken(pageToken).execute();
 			for (File f : result.getFiles()) {
@@ -809,6 +828,7 @@ public class DriveQuickstart {
 		} while (pageToken != null);
 		return res;
 	}
+	
 
 	/*
 	 * private static boolean hasTheSameName(String name,Drive credentials) throws

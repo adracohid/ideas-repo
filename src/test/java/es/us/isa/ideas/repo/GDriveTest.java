@@ -23,6 +23,7 @@ import es.us.isa.ideas.repo.gdrive.DriveQuickstart;
 import es.us.isa.ideas.repo.gdrive.GDriveDirectory;
 import es.us.isa.ideas.repo.gdrive.GDriveFile;
 import es.us.isa.ideas.repo.gdrive.GDriveProject;
+import es.us.isa.ideas.repo.gdrive.GDriveRepo;
 import es.us.isa.ideas.repo.gdrive.GDriveWorkspace;
 import es.us.isa.ideas.repo.impl.fs.FSFile;
 import es.us.isa.ideas.repo.impl.fs.FSRepo;
@@ -42,20 +43,24 @@ public class GDriveTest {
 
 	
 
-	private static void deleteGDriveWorkspace(String owner) {
+	private static boolean deleteGDriveWorkspace(String owner) {
+		boolean res=false;
 		File repoFolder;
+		GDriveRepo gdr = new GDriveRepo(credentials);
 		try {
 			repoFolder = DriveQuickstart.getRepoFolder(owner, credentials);
 
-			List<File> folders = new ArrayList<>(DriveQuickstart.getFoldersByFolderId(repoFolder.getId(), credentials));
+			List<File> folders = new ArrayList<>(DriveQuickstart.getFoldersByFolderId(repoFolder.getId(),credentials));
 			for (File f : folders) {
-				Facade.deleteGDriveWorkspace(f.getName(), user, credentials);
+				res=Facade.deleteGDriveWorkspace(f.getName(), user, credentials);
 			}
 		} catch (IOException | GeneralSecurityException | AuthenticationException | BadUriException e) {
 			// TODO Auto-generated catch block
 			e.printStackTrace();
 		}
+		return res;
 	}
+
 
 	@BeforeClass
 
@@ -77,7 +82,8 @@ public class GDriveTest {
 	public static void tearDownAfterClass() throws Exception {
 		// una vez terminados los tests borramos todos los workspaces y el fichero
 		// .history
-		deleteGDriveWorkspace(user);
+		boolean wgdrive=deleteGDriveWorkspace(user);
+		assertTrue(wgdrive);
 		// TODO
 		FSFile history = (FSFile) Facade.getFileFromUri("//.history", user);
 		history.delete();

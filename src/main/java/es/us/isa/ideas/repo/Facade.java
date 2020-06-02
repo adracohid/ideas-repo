@@ -30,6 +30,7 @@ import es.us.isa.ideas.repo.impl.fs.FSNode;
 import es.us.isa.ideas.repo.impl.fs.FSProject;
 import es.us.isa.ideas.repo.impl.fs.FSRepo;
 import es.us.isa.ideas.repo.impl.fs.FSWorkspace;
+import es.us.isa.ideas.repo.operation.Deletable;
 import es.us.isa.ideas.repo.operation.Listable;
 import net.lingala.zip4j.core.ZipFile;
 import net.lingala.zip4j.exception.ZipException;
@@ -495,6 +496,7 @@ public class Facade {
 	public static boolean deleteGDriveWorkspace(String dirWs, String owner,Drive credentials)
 			throws AuthenticationException, BadUriException {
 		GDriveWorkspace gdw=new GDriveWorkspace(dirWs, owner,credentials);
+		deleteLastNodes(dirWs, gdw.list(), owner, credentials);
 		return IdeasRepo.get().getRepo("GDRIVE").delete(gdw);
 	}
 	
@@ -509,7 +511,7 @@ public class Facade {
 	
 	public static GDriveProject getGDriveProjectFromUri(String path,String owner, Drive credentials) throws BadUriException {
 		GDriveProject res=null;
-		String[] split=path.split("/");
+		String[] split=splitURI(path);
 		if (split.length < 2) {
 			throw new BadUriException(
 					"Bad uri, it should contains at 1 separator.");
@@ -553,7 +555,7 @@ public class Facade {
 		return IdeasRepo.get().getRepo("GDRIVE").create(fsDir);
 	}
 
-	private static GDriveDirectory getGDriveDirectoryFromUri(String dirUri, String owner, Drive credentials) throws BadUriException {
+	public static GDriveDirectory getGDriveDirectoryFromUri(String dirUri, String owner, Drive credentials) throws BadUriException {
 		GDriveDirectory res=null;
 		String[] split=splitURI(dirUri);
 		 if(split.length<3) {
@@ -645,8 +647,12 @@ public class Facade {
 	public static boolean deleteGDriveProject(String projUri, String owner, Drive credentials)
 			throws AuthenticationException, BadUriException {
 		 GDriveProject p=getGDriveProjectFromUri(projUri, owner, credentials);
+		deleteLastNodes(projUri,p.list(),owner,credentials);
 		return IdeasRepo.get().getRepo("GDRIVE").delete(p);
 	}
+
+
+	
 	public static boolean deleteGDriveFile(String fileUri, String owner, Drive credentials)
 			throws BadUriException, AuthenticationException {
 		GDriveFile f=getGDriveFileFromUri(fileUri, owner, credentials);
@@ -656,9 +662,65 @@ public class Facade {
 	public static boolean deleteGDriveDirectory(String dirUri, String owner, Drive credentials)
 			throws AuthenticationException, BadUriException {
 		GDriveDirectory d=getGDriveDirectoryFromUri(dirUri, owner, credentials);
+		//Antes de borrar el directorio se borran las carpetas anidadas que tenga
+		//para que no lance ninguna excepcion
+		deleteLastNodes(dirUri,d.list(),owner,credentials);
 		return IdeasRepo.get().getRepo("GDRIVE").delete(d);
+		
 	}
-	
+	public static boolean deleteLastNodes(String dirUri,FSNode n,String owner, Drive credentials) throws BadUriException, AuthenticationException {
+		boolean res=false;
+		if(n.getChildren().isEmpty()) {
+			String[] splitURI=splitURI(dirUri);
+			String keypath="";
+			int lenURI=splitURI.length;
+			if(lenURI==1) {
+				keypath=keypath+dirUri+SEPARATOR+n.getKeyPath();
+				System.out.println(dirUri+SEPARATOR+n.getKeyPath());	
+				//Añadir el workspace al keypath
+			}else {
+				keypath=n.getKeyPath();
+			}
+			//String[] splitkey=splitURI(n.getKeyPath().replaceFirst("^[^/]+?/", ""));
+			String[] splitkey=splitURI(keypath);
+			int lenkey=splitkey.length;
+			
+			
+			
+			if((lenkey-lenURI)>2) {
+				//Recorre el keypath de derecha a izquierda 3 pasos cada loop
+				for(int i=lenkey-4;i>lenURI;i-=3) {
+					//Por cada loop se crea un nombre nuevo
+					String name="";
+					for(int j=0;j<i+1;j++) {
+						name=name+splitkey[j];
+						if(j!=i) {
+							name=name+SEPARATOR;
+						}
+					}
+//					String folderName=name.replaceFirst("^[^\\\\]+?\\\\", "");
+					Listable l=getGListableFromUri(name, owner,credentials);
+					
+					if(l instanceof GDriveDirectory) {
+						IdeasRepo.get().getRepo("GDRIVE").delete(((GDriveDirectory) l));
+						System.out.println("DELETE");
+						res=true;
+					}else if(l instanceof GDriveProject) {
+						IdeasRepo.get().getRepo("GDRIVE").delete(((GDriveProject) l));
+						System.out.println("DELETE");
+					}else {
+						deleteGDriveWorkspace(name, owner, credentials);
+					}
+					
+				}
+			}
+		}else {
+			for(int i=0;i<n.getChildren().size();i++) {
+				deleteLastNodes(dirUri,(FSNode) n.getChildren().get(i),owner,credentials);
+			}
+		}
+		return res;
+	}
 	public static boolean moveGDriveDirectory(String dirUri, String owner,
 			String destUri, boolean copy, Drive credentials) throws BadUriException,
 			AuthenticationException {

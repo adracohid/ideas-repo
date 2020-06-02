@@ -117,6 +117,7 @@ public class GDriveDirectory extends Directory {
 				LOGGER.log(Level.INFO, "Directory " + this.getName() + " does not exist.");
 
 			} else {
+				
 				this.credentials.files().delete(file.getId()).execute();
 				res = true;
 			}
@@ -196,7 +197,9 @@ public class GDriveDirectory extends Directory {
 		res.setTitle(this.getName());
 		res.setFolder(true);
 		res.setIcon(FSNodeIcon.FOLDER);
-		String path = this.getOwner() + "/" + this.getWorkspace() + "/" + this.getProject() + "/" + this.getName();
+		//String path = this.getOwner() + "/" + this.getWorkspace() + "/" + this.getProject() + "/" + this.getName();
+		String path =  this.getWorkspace() + "/" + this.getProject() + "/" + this.getName();
+
 		res.setKeyPath(path);
 		try {
 			File folder = DriveQuickstart.getDirectoryByName(this.getName(), this.getProject(), this.getWorkspace(),
